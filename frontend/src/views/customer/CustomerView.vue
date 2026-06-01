@@ -2,7 +2,7 @@
   <div class="page">
     <el-card>
       <template #header>
-        <div class="card-header"><span>客户管理</span><el-button type="primary" @click="openCreate">新增客户</el-button></div>
+        <div class="card-header"><span>客户管理</span><el-button type="primary" @click="goCreate">新增客户</el-button></div>
       </template>
       <el-form :model="searchForm" inline class="search-form">
         <el-form-item label="关键词"><el-input v-model="searchForm.keyword" placeholder="名称/编码/电话" clearable /></el-form-item>
@@ -30,48 +30,33 @@
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }"><el-tag :type="row.status === 1 ? 'success' : 'danger'">{{ row.status === 1 ? '启用' : '禁用' }}</el-tag></template>
         </el-table-column>
-        <el-table-column label="操作" width="180" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" size="small" @click="openEdit(row)">编辑</el-button>
+            <el-button type="primary" size="small" @click="goDetail(row.id)">查看</el-button>
+            <el-button type="warning" size="small" @click="goEdit(row.id)">编辑</el-button>
             <el-button type="danger" size="small" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
       <el-pagination v-model:current-page="pagination.page" v-model:page-size="pagination.pageSize" :total="total" :page-sizes="[10,20,50]" layout="total, sizes, prev, pager, next" @size-change="handleSizeChange" @current-change="handleCurrentChange" class="pagination" />
     </el-card>
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px">
-      <el-form :model="form" label-width="100px">
-        <el-form-item label="名称" required><el-input v-model="form.name" /></el-form-item>
-        <el-form-item label="编码"><el-input v-model="form.code" /></el-form-item>
-        <el-form-item label="类型" required>
-          <el-select v-model="form.type">
-            <el-option label="客户" value="customer" /><el-option label="供应商" value="supplier" /><el-option label="两者都是" value="both" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="联系人"><el-input v-model="form.contact" /></el-form-item>
-        <el-form-item label="电话"><el-input v-model="form.phone" /></el-form-item>
-        <el-form-item label="邮箱"><el-input v-model="form.email" /></el-form-item>
-        <el-form-item label="地址"><el-input v-model="form.address" /></el-form-item>
-        <el-form-item label="信用额度"><el-input-number v-model="form.creditLimit" :precision="2" /></el-form-item>
-        <el-form-item label="账期"><el-input-number v-model="form.creditDays" /></el-form-item>
-        <el-form-item label="状态"><el-switch v-model="form.status" :active-value="1" :inactive-value="0" /></el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit">确定</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
 import { useCrud } from '@/composables/useCrud'
 
 interface Customer { id: number; name: string; code: string; type: string; contact: string; phone: string; status: number }
 
+const router = useRouter()
 const crud = useCrud<Customer>({ baseUrl: '/api/v1/customers', defaultForm: () => ({ status: 1, type: 'customer' }) })
-const { list, total, loading, dialogVisible, dialogTitle, form, searchForm, pagination, fetchList, openCreate, openEdit, handleSubmit, handleDelete, handleSizeChange, handleCurrentChange, handleSearch, handleReset } = crud
+const { list, total, loading, searchForm, pagination, fetchList, handleDelete, handleSizeChange, handleCurrentChange, handleSearch, handleReset } = crud
 fetchList()
+
+function goCreate() { router.push('/customers/new') }
+function goDetail(id: number) { router.push(`/customers/${id}`) }
+function goEdit(id: number) { router.push(`/customers/${id}?mode=edit`) }
 </script>
 
 <style scoped>

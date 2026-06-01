@@ -26,6 +26,11 @@
             </el-tag>
           </template>
         </el-table-column>
+        <el-table-column label="操作" width="120" fixed="right">
+          <template #default="{ row }">
+            <el-button type="primary" size="small" @click="goDetail(row.id)">查看</el-button>
+          </template>
+        </el-table-column>
       </el-table>
       <el-pagination v-model:current-page="pagination.page" v-model:page-size="pagination.pageSize" :total="total" :page-sizes="[10,20,50]" layout="total, sizes, prev, pager, next" @size-change="handleSizeChange" @current-change="handleCurrentChange" class="pagination" />
     </el-card>
@@ -33,14 +38,18 @@
 </template>
 
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
 import { useCrud } from '@/composables/useCrud'
 import RemoteSelect from '@/components/RemoteSelect.vue'
 
 interface MallOrder { id: number; orderNo: string; customerId?: number; customerName?: string; totalAmount: number; status: string }
 
+const router = useRouter()
 const crud = useCrud<MallOrder>({ baseUrl: '/api/v1/mall-orders' })
 const { list, total, loading, searchForm, pagination, fetchList, handleSearch, handleReset, handleSizeChange, handleCurrentChange } = crud
 fetchList()
+
+function goDetail(id: number) { router.push(`/mall-orders/${id}`) }
 </script>
 
 <style scoped>

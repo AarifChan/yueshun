@@ -42,6 +42,13 @@ const router = createRouter({
           meta: { title: '职员管理', icon: 'UserFilled' },
         },
         {
+          path: 'employees/:id',
+          name: 'EmployeeDetail',
+          component: () => import('@/views/base/EmployeeDetailView.vue'),
+          meta: { title: '职员详情' },
+          hidden: true,
+        },
+        {
           path: 'roles',
           name: 'Roles',
           component: () => import('@/views/base/RoleView.vue'),
@@ -85,6 +92,13 @@ const router = createRouter({
           name: 'Customers',
           component: () => import('@/views/customer/CustomerView.vue'),
           meta: { title: '客户管理', icon: 'User' },
+        },
+        {
+          path: 'customers/:id',
+          name: 'CustomerDetail',
+          component: () => import('@/views/customer/CustomerDetailView.vue'),
+          meta: { title: '客户详情' },
+          hidden: true,
         },
         {
           path: 'customer-categories',
@@ -276,6 +290,13 @@ const router = createRouter({
           meta: { title: '商城订单', icon: 'Document' },
         },
         {
+          path: 'mall-orders/:id',
+          name: 'MallOrderDetail',
+          component: () => import('@/views/mall/OrderDetailView.vue'),
+          meta: { title: '商城订单详情' },
+          hidden: true,
+        },
+        {
           path: 'mall-carts',
           name: 'MallCarts',
           component: () => import('@/views/mall/CartView.vue'),
@@ -299,6 +320,13 @@ const router = createRouter({
           name: 'Contracts',
           component: () => import('@/views/crm/ContractView.vue'),
           meta: { title: '合同管理', icon: 'DocumentChecked' },
+        },
+        {
+          path: 'contracts/:id',
+          name: 'ContractDetail',
+          component: () => import('@/views/crm/ContractDetailView.vue'),
+          meta: { title: '合同详情' },
+          hidden: true,
         },
         // 审批模块
         {
