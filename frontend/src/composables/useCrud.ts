@@ -113,7 +113,14 @@ export function useCrud<T extends Record<string, any>>(options: CrudOptions<T>) 
     try {
       const method = (action.method || 'put').toLowerCase()
       const url = action.api.replace(':id', String(row.id))
-      const res = await api[method](url)
+      let res
+      if (method === 'post') {
+        res = await api.post(url)
+      } else if (method === 'delete') {
+        res = await api.delete(url)
+      } else {
+        res = await api.put(url)
+      }
       if (res.data.code === 0 || res.data.code === 200) {
         ElMessage.success('操作成功')
         await fetchList()

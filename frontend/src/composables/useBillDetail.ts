@@ -11,7 +11,7 @@ export interface BillDetailOptions {
 }
 
 export function useBillDetail(options: BillDetailOptions) {
-  const { baseUrl, defaultForm, defaultItem, statusActions } = options
+  const { baseUrl, defaultForm, defaultItem } = options
   const router = useRouter()
 
   const form = ref<Record<string, any>>(defaultForm())
@@ -58,10 +58,8 @@ export function useBillDetail(options: BillDetailOptions) {
   async function save() {
     saving.value = true
     try {
-      const payload = { ...form.value, items: items.value }
-      delete payload.id
-      delete payload.createdAt
-      delete payload.updatedAt
+      const raw = { ...form.value, items: items.value } as Record<string, any>
+      const { id: _id, createdAt: _c, updatedAt: _u, ...payload } = raw
       const res = mode.value === 'create'
         ? await api.post(baseUrl, payload)
         : await api.put(`${baseUrl}/${form.value.id}`, payload)
@@ -82,7 +80,14 @@ export function useBillDetail(options: BillDetailOptions) {
     try {
       const method = (action.method || 'put').toLowerCase()
       const url = action.api.replace(':id', String(form.value.id))
-      const res = await api[method](url)
+      let res
+      if (method === 'post') {
+        res = await api.post(url)
+      } else if (method === 'delete') {
+        res = await api.delete(url)
+      } else {
+        res = await api.put(url)
+      }
       if (res.data.code === 0 || res.data.code === 200) {
         ElMessage.success('操作成功')
         await loadDetail(form.value.id)
