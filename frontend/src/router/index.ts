@@ -61,6 +61,13 @@ const router = createRouter({
           meta: { title: '商品管理', icon: 'Goods' },
         },
         {
+          path: 'products/:id',
+          name: 'ProductDetail',
+          component: () => import('@/views/product/ProductDetailView.vue'),
+          meta: { title: '商品详情' },
+          hidden: true,
+        },
+        {
           path: 'categories',
           name: 'Categories',
           component: () => import('@/views/product/CategoryView.vue'),
