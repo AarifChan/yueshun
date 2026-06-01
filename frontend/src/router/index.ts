@@ -123,6 +123,19 @@ const router = createRouter({
           component: () => import('@/views/price/PriceLevelView.vue'),
           meta: { title: '价格体系', icon: 'PriceTag' },
         },
+        // Inventory detail pages
+        {
+          path: 'inventory-checks/:id',
+          name: 'InventoryCheckDetail',
+          component: () => import('@/views/inventory/CheckDetailView.vue'),
+          meta: { title: '库存盘点详情' },
+        },
+        {
+          path: 'inventory-transfers/:id',
+          name: 'InventoryTransferDetail',
+          component: () => import('@/views/inventory/TransferDetailView.vue'),
+          meta: { title: '库存调拨详情' },
+        },
         // 库存模块
         {
           path: 'inventory-checks',
