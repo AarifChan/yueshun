@@ -192,6 +192,31 @@ const router = createRouter({
           component: () => import('@/views/purchase/PaymentDetailView.vue'),
           meta: { title: '采购付款详情' },
         },
+        // Sale detail pages
+        {
+          path: 'sales-orders/:id',
+          name: 'SalesOrderDetail',
+          component: () => import('@/views/sale/OrderDetailView.vue'),
+          meta: { title: '销售订单详情' },
+        },
+        {
+          path: 'sales-outstock/:id',
+          name: 'SalesOutStockDetail',
+          component: () => import('@/views/sale/OutStockDetailView.vue'),
+          meta: { title: '销售出库详情' },
+        },
+        {
+          path: 'sales-returns/:id',
+          name: 'SalesReturnDetail',
+          component: () => import('@/views/sale/ReturnDetailView.vue'),
+          meta: { title: '销售退货详情' },
+        },
+        {
+          path: 'sales-receipts/:id',
+          name: 'SalesReceiptDetail',
+          component: () => import('@/views/sale/ReceiptDetailView.vue'),
+          meta: { title: '销售收款详情' },
+        },
         // 销售模块
         {
           path: 'sales-orders',
@@ -273,7 +298,7 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, _from, next) => {
   const authStore = useAuthStore()
 
   if (to.meta.public) {
