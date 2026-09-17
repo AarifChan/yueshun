@@ -140,7 +140,7 @@ func initLogger(cfg *Config) {
 }
 
 func autoMigrate(db *gorm.DB) error {
-	return db.AutoMigrate(
+	if err := db.AutoMigrate(
 		&model.Company{},
 		&model.Department{},
 		&model.Role{},
@@ -205,5 +205,10 @@ func autoMigrate(db *gorm.DB) error {
 		// 审批模块
 		&model.ApprovalProcess{},
 		&model.ApprovalRecord{},
-	)
+	); err != nil {
+		return err
+	}
+	// 企业微信绑定：(公司, 手机号) 复合唯一索引
+	// 不用 GORM tag 的原因：CompanyID 在共享的 BaseModelWithCompany 中，打 tag 会污染所有租户模型
+	return db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_emp_phone_company ON employees (company_id, phone)").Error
 }

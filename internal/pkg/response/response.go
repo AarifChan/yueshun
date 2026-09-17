@@ -28,6 +28,11 @@ const (
 	CodeDuplicate       = 4002
 	CodeNotExist        = 4003
 	CodeNoPermission    = 4004
+
+	// 企业微信登录 41xx
+	CodeNeedWecom        = 4101 // 非超管尝试密码登录
+	CodeNotWecomMember   = 4102 // 非企业成员
+	CodeEmpNotRegistered = 4103 // 企业成员但系统未建档
 )
 
 // Success 成功响应

@@ -23,16 +23,17 @@ type BaseModelWithCompany struct {
 // Employee 职员（系统用户）
 type Employee struct {
 	BaseModelWithCompany
-	DeptID       uint      `json:"deptId" gorm:"index;not null"`
-	RoleID       uint      `json:"roleId" gorm:"index;not null"`
-	Username     string    `json:"username" gorm:"size:64;uniqueIndex:idx_emp_username_company"`
-	Password     string    `json:"-" gorm:"size:128;not null"`
-	Name         string    `json:"name" gorm:"size:64;not null"`
-	Phone        string    `json:"phone" gorm:"size:20;index"`
-	Email        string    `json:"email" gorm:"size:128"`
-	Status       int8      `json:"status" gorm:"default:1;comment:1启用 0禁用"`
+	DeptID       uint       `json:"deptId" gorm:"index;not null"`
+	RoleID       uint       `json:"roleId" gorm:"index;not null"`
+	Username     string     `json:"username" gorm:"size:64;uniqueIndex:idx_emp_username_company"`
+	Password     string     `json:"-" gorm:"size:128"` // 企业微信登录员工无密码
+	Name         string     `json:"name" gorm:"size:64;not null"`
+	Phone        string     `json:"phone" gorm:"size:20;index"`
+	Email        string     `json:"email" gorm:"size:128"`
+	WecomUserID  string     `json:"wecomUserId" gorm:"size:64;index"` // 企业微信成员 userid，首次登录绑定
+	Status       int8       `json:"status" gorm:"default:1;comment:1启用 0禁用"`
 	LastLoginAt  *time.Time `json:"lastLoginAt"`
-	LastLoginIP  string    `json:"lastLoginIp" gorm:"size:64"`
+	LastLoginIP  string     `json:"lastLoginIp" gorm:"size:64"`
 }
 
 // Role 角色
