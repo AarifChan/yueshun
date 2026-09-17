@@ -82,6 +82,11 @@ func Fail(c *gin.Context, code int, message string) {
 	c.JSON(http.StatusOK, Error(code, message))
 }
 
+// FailWithData 失败响应（带附加数据，如引导二维码地址）
+func FailWithData(c *gin.Context, code int, message string, data interface{}) {
+	c.JSON(http.StatusOK, Response{Code: code, Message: message, Data: data})
+}
+
 // BadRequest 返回 400
 func BadRequest(c *gin.Context, message string) {
 	c.JSON(http.StatusBadRequest, Error(CodeBadRequest, message))

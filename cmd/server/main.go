@@ -19,6 +19,8 @@ import (
 	"zhizhang-server/internal/model"
 	"zhizhang-server/internal/pkg/database"
 	"zhizhang-server/internal/pkg/redis"
+	"zhizhang-server/internal/pkg/wecom"
+	"zhizhang-server/internal/pkg/wxmp"
 )
 
 // Config 应用配置
@@ -104,8 +106,25 @@ func main() {
 		RefreshTTL: cfg.JWT.RefreshTTL,
 	}
 
+	// 企业微信/微信小程序未配置时给出告警（端点会返回 4001，不影响其余功能）
+	if cfg.Wecom.CorpID == "" || cfg.Wecom.Secret == "" {
+		log.Warn().Msg("wecom login not configured (ZHIZHANG_WECOM_* empty); wecom endpoints will respond 4001")
+	}
+	if cfg.WechatMP.AppID == "" || cfg.WechatMP.Secret == "" {
+		log.Warn().Msg("wechat mp not configured (ZHIZHANG_WECHAT_MP_* empty); mp phone login unavailable")
+	}
+
 	// 配置路由
-	router := api.SetupRouter(db, jwtCfg)
+	router := api.SetupRouter(db, jwtCfg, &wecom.Config{
+		CorpID:       cfg.Wecom.CorpID,
+		AgentID:      cfg.Wecom.AgentID,
+		Secret:       cfg.Wecom.Secret,
+		InviteQRURL:  cfg.Wecom.InviteQRURL,
+		RedirectHost: cfg.Wecom.RedirectHost,
+	}, &wxmp.Config{
+		AppID:  cfg.WechatMP.AppID,
+		Secret: cfg.WechatMP.Secret,
+	})
 
 	// 启动服务
 	addr := fmt.Sprintf(":%d", cfg.App.Port)

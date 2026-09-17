@@ -8,15 +8,18 @@ import (
 	"zhizhang-server/internal/api/handler"
 	"zhizhang-server/internal/api/middleware"
 	"zhizhang-server/internal/pkg/response"
+	"zhizhang-server/internal/pkg/wecom"
+	"zhizhang-server/internal/pkg/wxmp"
 )
 
 // SetupRouter 配置路由
-func SetupRouter(db *gorm.DB, jwtCfg *middleware.JWTConfig) *gin.Engine {
+func SetupRouter(db *gorm.DB, jwtCfg *middleware.JWTConfig, wecomCfg *wecom.Config, wxmpCfg *wxmp.Config) *gin.Engine {
 	// 初始化 JWT
 	middleware.InitJWT(jwtCfg)
 
 	// 初始化处理器
 	authHandler := handler.NewAuthHandler(db)
+	wecomAuthHandler := handler.NewWecomAuthHandler(db, wecom.NewClient(wecomCfg), wxmp.NewClient(wxmpCfg), wecomCfg)
 	dictHandler := handler.NewDictHandler(db)
 	deptHandler := handler.NewDepartmentHandler(db)
 	empHandler := handler.NewEmployeeHandler(db)
@@ -51,6 +54,7 @@ func SetupRouter(db *gorm.DB, jwtCfg *middleware.JWTConfig) *gin.Engine {
 	{
 		// 认证（公开）
 		authHandler.RegisterRoutes(v1)
+		wecomAuthHandler.RegisterRoutes(v1)
 
 		// 需要认证的路由组
 		authorized := v1.Group("")
