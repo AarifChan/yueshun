@@ -80,7 +80,7 @@ type Client interface {
 
 | 端点 | 方法 | 鉴权 | 说明 |
 |------|------|------|------|
-| `/api/v1/auth/wecom/config` | GET | 公开 | 返回 `{corpid, agentId, inviteQrUrl}`，供登录页构造二维码与引导页 |
+| `/api/v1/auth/wecom/config` | GET | 公开 | 返回 `{corpid, agentId, inviteQrUrl, redirectHost}`，供登录页构造二维码与引导页 |
 | `/api/v1/auth/wecom/mp` | POST | 公开 | body `{code}`：小程序登录 |
 | `/api/v1/auth/wecom/web` | POST | 公开 | body `{code}`：Web 扫码登录 |
 
@@ -123,7 +123,7 @@ WecomUserID string  `json:"wecomUserId" gorm:"size:64;index"`            // 新�
 
 - AutoMigrate 自动处理：新增列、`password` DROP NOT NULL、唯一索引创建。现有数据仅 seed admin 一条，无冲突。
 - 唯一索引前提：管理员建档时手机号必填（employee 接口同步加校验）。
-- 实现注意：复合唯一索引 `(company_id, phone)` 需要 `BaseModelWithCompany` 的 `CompanyID` 字段与 `Phone` 字段使用**同名** `uniqueIndex:idx_emp_phone_company` 标签，GORM 才会合并为复合索引；只标 `Phone` 会生成全局唯一索引，导致不同公司无法有相同手机号。
+- 实现注意：复合唯一索引 `(company_id, phone)` **不能用** GORM 同名 tag 方式实现——`CompanyID` 在共享的 `BaseModelWithCompany` 里，打 tag 会给所有租户模型都加索引。改为在 `autoMigrate()` 完成后执行原生 SQL：`CREATE UNIQUE INDEX IF NOT EXISTS idx_emp_phone_company ON employees (company_id, phone)`（PostgreSQL/SQLite 均兼容该语法，测试可用 SQLite 内存库）。
 
 ### 4.2 绑定判定（小程序与 Web 共用）
 
@@ -186,13 +186,14 @@ wechat_mp:
 ```
 
 - 沿用 `ZHIZHANG_` 环境变量前缀覆盖（如 `ZHIZHANG_WECOM_CORPID`）。
+- **配置以环境变量为准**：`config.yaml` 仅保留占位空值，`.env.example` 必须补齐全部新增变量及说明；部署时通过环境变量注入，不把真实凭证写进仓库。
 - 启动校验：为空 → warn 日志，相关端点返回 4001「企业微信登录未配置」，不阻断启动。
 - Secret 不出服务端；公开端点只暴露 corpid / agentId / inviteQrUrl。
 
 ## 7. 安全设计
 
 - WWLogin 回调 `state` 防 CSRF：前端生成随机 state 存 sessionStorage，回调校验一致后才提交 code。
-- access_token 缓存于 Redis（两个客户端各自提前 300s 刷新）；Redis 故障不降级，按服务异常处理（与系统现有 Redis 依赖一致）。
+- access_token 缓存于 Redis（两个客户端各自提前 300s 刷新）；Redis 不可用时**跳过缓存直接调第三方 API**——`main.go` 里 Redis 本就是可选非阻塞依赖，登录链路不应比系统其他部分更脆弱；不引入进程内缓存复杂度。
 - 小程序 code 一次性、5 分钟有效，后端原样透传微信侧错误为 400「授权已过期，请重试」。
 - 服务端错误日志带上下文（zerolog），前端只展示业务文案，不泄露内部错误细节。
 - 已知缺口（列为后续加固，不在本期）：登录端点频率限制（现有系统全端点均无限流器，需单独立项）。
