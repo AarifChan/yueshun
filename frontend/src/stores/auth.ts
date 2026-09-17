@@ -26,7 +26,9 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = data.user
       return data
     }
-    throw new Error(res.data.message || '登录失败')
+    const err = new Error(res.data.message || '登录失败') as Error & { code?: number }
+    err.code = res.data.code
+    throw err
   }
 
   async function wecomLogin(code: string) {

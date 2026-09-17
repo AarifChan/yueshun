@@ -46,3 +46,20 @@ describe('wecomLogin', () => {
     expect(store.token).toBe('')
   })
 })
+
+describe('login', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    localStorage.clear()
+    vi.clearAllMocks()
+  })
+
+  it('非超管密码登录被拒：抛出带 4101 的错误', async () => {
+    vi.mocked(api.post).mockResolvedValue({
+      data: { code: 4101, message: '当前账号请使用企业微信登录' },
+    })
+    const store = useAuthStore()
+    await expect(store.login('staff', '123456')).rejects.toMatchObject({ code: 4101 })
+    expect(store.token).toBe('')
+  })
+})
