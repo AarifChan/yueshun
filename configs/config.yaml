@@ -37,3 +37,16 @@ log:
 pagination:
   default_page_size: 20
   max_page_size: 500
+
+# 企业微信（自建应用）—— 真实值一律用环境变量注入，勿写进仓库（见 docs/wecom-setup.md）
+wecom:
+  corpid: ""
+  agentid: 0
+  secret: ""
+  invite_qr_url: ""
+  redirect_host: ""
+
+# 微信小程序 —— 真实值一律用环境变量注入
+wechat_mp:
+  appid: ""
+  secret: ""

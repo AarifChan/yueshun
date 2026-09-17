@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -35,7 +36,18 @@ type Config struct {
 	} `mapstructure:"jwt"`
 	Database database.Config `mapstructure:"database"`
 	Redis    redis.Config  `mapstructure:"redis"`
-	Log      struct {
+	Wecom    struct {
+		CorpID       string `mapstructure:"corpid"`
+		AgentID      int    `mapstructure:"agentid"`
+		Secret       string `mapstructure:"secret"`
+		InviteQRURL  string `mapstructure:"invite_qr_url"`
+		RedirectHost string `mapstructure:"redirect_host"`
+	} `mapstructure:"wecom"`
+	WechatMP struct {
+		AppID  string `mapstructure:"appid"`
+		Secret string `mapstructure:"secret"`
+	} `mapstructure:"wechat_mp"`
+	Log struct {
 		Level  string `mapstructure:"level"`
 		Format string `mapstructure:"format"`
 		Output string `mapstructure:"output"`
@@ -111,6 +123,7 @@ func loadConfig() (*Config, error) {
 
 	// 环境变量覆盖
 	viper.SetEnvPrefix("ZHIZHANG")
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_")) // ZHIZHANG_WECOM_CORPID → wecom.corpid
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err != nil {
