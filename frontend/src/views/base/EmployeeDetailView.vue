@@ -14,9 +14,9 @@
           <el-col :span="8"><el-form-item label="状态"><el-switch v-model="form.status" :active-value="1" :inactive-value="0" /></el-form-item></el-col>
         </el-row>
         <el-row :gutter="20">
-          <el-col :span="8"><el-form-item label="手机号"><el-input v-model="form.phone" /></el-form-item></el-col>
+          <el-col :span="8"><el-form-item label="手机号" required><el-input v-model="form.phone" placeholder="企业微信登录的手机号绑定键" /></el-form-item></el-col>
           <el-col :span="8"><el-form-item label="邮箱"><el-input v-model="form.email" /></el-form-item></el-col>
-          <el-col :span="8" v-if="id === 'new'"><el-form-item label="密码"><el-input v-model="form.password" type="password" /></el-form-item></el-col>
+          <el-col :span="8" v-if="id === 'new'"><el-form-item label="密码"><el-input v-model="form.password" type="password" placeholder="留空则仅支持企业微信登录" /></el-form-item></el-col>
         </el-row>
       </el-form>
     </el-card>
@@ -78,6 +78,10 @@ async function loadDetail(employeeId: string) {
 }
 
 async function save() {
+  if (!form.phone) {
+    ElMessage.warning('请填写手机号（企业微信登录绑定键）')
+    return
+  }
   saving.value = true
   try {
     const payload = { ...form }
