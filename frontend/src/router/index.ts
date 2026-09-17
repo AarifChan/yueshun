@@ -11,6 +11,12 @@ const router = createRouter({
       meta: { public: true },
     },
     {
+      path: '/login/wecom/callback',
+      name: 'WecomCallback',
+      component: () => import('@/views/WecomCallbackView.vue'),
+      meta: { public: true },
+    },
+    {
       path: '/',
       name: 'Layout',
       component: () => import('@/layouts/MainLayout.vue'),
