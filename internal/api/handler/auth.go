@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm"
 	"zhizhang-server/internal/api/middleware"
 	"zhizhang-server/internal/model"
+	"zhizhang-server/internal/pkg/errors"
 	"zhizhang-server/internal/pkg/response"
 )
 
@@ -22,10 +23,11 @@ type LoginReq struct {
 
 // LoginResp 登录响应
 type LoginResp struct {
-	AccessToken  string `json:"accessToken"`
-	RefreshToken string `json:"refreshToken"`
-	ExpiresIn    int    `json:"expiresIn"`
-	User         UserInfo `json:"user"`
+	AccessToken      string   `json:"accessToken"`
+	RefreshToken     string   `json:"refreshToken"`
+	AccessExpiresIn  int      `json:"accessExpiresIn"`  // 访问令牌有效期（秒）
+	RefreshExpiresIn int      `json:"refreshExpiresIn"` // 刷新令牌有效期（秒）
+	User             UserInfo `json:"user"`
 }
 
 // UserInfo 用户信息
@@ -41,6 +43,32 @@ type UserInfo struct {
 // RefreshReq 刷新令牌请求
 type RefreshReq struct {
 	RefreshToken string `json:"refreshToken" binding:"required"`
+}
+
+// issueTokenPair 为员工签发 access/refresh 令牌对（密码登录、刷新、企业微信登录共用）
+func issueTokenPair(emp *model.Employee) (*LoginResp, error) {
+	accessToken, err := middleware.GenerateToken(emp.ID, emp.Username, emp.RoleID, emp.DeptID, emp.CompanyID)
+	if err != nil {
+		return nil, err
+	}
+	refreshToken, err := middleware.GenerateRefreshToken(emp.ID)
+	if err != nil {
+		return nil, err
+	}
+	return &LoginResp{
+		AccessToken:      accessToken,
+		RefreshToken:     refreshToken,
+		AccessExpiresIn:  middleware.GetAccessTTL(),
+		RefreshExpiresIn: middleware.GetRefreshTTL(),
+		User: UserInfo{
+			ID:       emp.ID,
+			Username: emp.Username,
+			Name:     emp.Name,
+			Phone:    emp.Phone,
+			RoleID:   emp.RoleID,
+			DeptID:   emp.DeptID,
+		},
+	}, nil
 }
 
 // AuthHandler 认证处理器
@@ -100,18 +128,10 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	// 生成令牌
-	accessToken, err := middleware.GenerateToken(emp.ID, emp.Username, emp.RoleID, emp.DeptID, emp.CompanyID)
-	if err != nil {
-		log.Error().Err(err).Msg("generate access token failed")
-		response.ServerError(c, "令牌生成失败")
-		return
-	}
-
-	refreshToken, err := middleware.GenerateRefreshToken(emp.ID)
-	if err != nil {
-		log.Error().Err(err).Msg("generate refresh token failed")
-		response.ServerError(c, "令牌生成失败")
+	// 密码登录仅超级管理员可用，其余角色必须走企业微信登录
+	var role model.Role
+	if err := h.db.First(&role, emp.RoleID).Error; err != nil || role.Code != "super_admin" {
+		response.Fail(c, response.CodeNeedWecom, "当前账号请使用企业微信登录")
 		return
 	}
 
@@ -121,18 +141,11 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	emp.LastLoginIP = c.ClientIP()
 	h.db.Save(&emp)
 
-	resp := LoginResp{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-		ExpiresIn:    7200,
-		User: UserInfo{
-			ID:       emp.ID,
-			Username: emp.Username,
-			Name:     emp.Name,
-			Phone:    emp.Phone,
-			RoleID:   emp.RoleID,
-			DeptID:   emp.DeptID,
-		},
+	resp, err := issueTokenPair(&emp)
+	if err != nil {
+		log.Error().Err(err).Msg("issue token pair failed")
+		response.ServerError(c, "令牌生成失败")
+		return
 	}
 
 	response.Ok(c, resp)
@@ -140,7 +153,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 // Refresh 刷新访问令牌
 // @Summary 刷新访问令牌
-// @Description 使用 RefreshToken 获取新的 AccessToken
+// @Description 使用 RefreshToken 获取新的 AccessToken（同时轮换 RefreshToken）
 // @Tags 认证
 // @Accept json
 // @Produce json
@@ -154,9 +167,33 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 		return
 	}
 
-	// TODO: 解析 refresh token 并验证
-	// 简化版：直接返回需要重新登录
-	response.Fail(c, response.CodeUnauthorized, "请重新登录")
+	// 解析并验证 refresh token
+	userID, err := middleware.ParseRefreshToken(req.RefreshToken)
+	if err != nil {
+		if err == errors.ErrExpiredToken {
+			response.Fail(c, response.CodeUnauthorized, "刷新令牌已过期，请重新登录")
+			return
+		}
+		response.Fail(c, response.CodeUnauthorized, "无效的刷新令牌，请重新登录")
+		return
+	}
+
+	// 校验用户仍然存在且可用
+	var emp model.Employee
+	if err := h.db.Where("id = ? AND status = 1", userID).First(&emp).Error; err != nil {
+		response.Fail(c, response.CodeUnauthorized, "用户不可用，请重新登录")
+		return
+	}
+
+	// 签发新的令牌对
+	resp, err := issueTokenPair(&emp)
+	if err != nil {
+		log.Error().Err(err).Msg("issue token pair failed")
+		response.ServerError(c, "令牌生成失败")
+		return
+	}
+
+	response.Ok(c, resp)
 }
 
 // Logout 登出
