@@ -15,9 +15,13 @@ definitions:
     type: object
   handler.LoginResp:
     properties:
+      accessExpiresIn:
+        description: 访问令牌有效期（秒）
+        type: integer
       accessToken:
         type: string
-      expiresIn:
+      refreshExpiresIn:
+        description: 刷新令牌有效期（秒）
         type: integer
       refreshToken:
         type: string
@@ -45,6 +49,13 @@ definitions:
         type: integer
       username:
         type: string
+    type: object
+  handler.wecomCodeReq:
+    properties:
+      code:
+        type: string
+    required:
+    - code
     type: object
   response.Response:
     properties:
@@ -131,7 +142,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: 使用 RefreshToken 获取新的 AccessToken
+      description: 使用 RefreshToken 获取新的 AccessToken（同时轮换 RefreshToken）
       parameters:
       - description: 刷新参数
         in: body
@@ -152,6 +163,73 @@ paths:
                   $ref: '#/definitions/handler.LoginResp'
               type: object
       summary: 刷新访问令牌
+      tags:
+      - 认证
+  /api/v1/auth/wecom/config:
+    get:
+      description: 返回 corpid/agentId/inviteQrUrl/redirectHost 供登录页使用（不含 secret）
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 企业微信登录配置
+      tags:
+      - 认证
+  /api/v1/auth/wecom/mp:
+    post:
+      consumes:
+      - application/json
+      description: getPhoneNumber code → 手机号 → 校验企业成员身份 → 绑定/签发 JWT
+      parameters:
+      - description: 手机号授权码
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.wecomCodeReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 登录成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/handler.LoginResp'
+              type: object
+      summary: 小程序企业微信登录
+      tags:
+      - 认证
+  /api/v1/auth/wecom/web:
+    post:
+      consumes:
+      - application/json
+      description: WWLogin 授权 code → 成员 userid → 详情(手机号) → 绑定/签发 JWT
+      parameters:
+      - description: 扫码授权码
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.wecomCodeReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 登录成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/handler.LoginResp'
+              type: object
+      summary: Web 企业微信扫码登录
       tags:
       - 认证
 swagger: "2.0"

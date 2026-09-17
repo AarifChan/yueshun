@@ -137,7 +137,7 @@ const docTemplate = `{
         },
         "/api/v1/auth/refresh": {
             "post": {
-                "description": "使用 RefreshToken 获取新的 AccessToken",
+                "description": "使用 RefreshToken 获取新的 AccessToken（同时轮换 RefreshToken）",
                 "consumes": [
                     "application/json"
                 ],
@@ -162,6 +162,118 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "刷新成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/handler.LoginResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/wecom/config": {
+            "get": {
+                "description": "返回 corpid/agentId/inviteQrUrl/redirectHost 供登录页使用（不含 secret）",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "认证"
+                ],
+                "summary": "企业微信登录配置",
+                "responses": {
+                    "200": {
+                        "description": "获取成功",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/wecom/mp": {
+            "post": {
+                "description": "getPhoneNumber code → 手机号 → 校验企业成员身份 → 绑定/签发 JWT",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "认证"
+                ],
+                "summary": "小程序企业微信登录",
+                "parameters": [
+                    {
+                        "description": "手机号授权码",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.wecomCodeReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "登录成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/handler.LoginResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/wecom/web": {
+            "post": {
+                "description": "WWLogin 授权 code → 成员 userid → 详情(手机号) → 绑定/签发 JWT",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "认证"
+                ],
+                "summary": "Web 企业微信扫码登录",
+                "parameters": [
+                    {
+                        "description": "扫码授权码",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.wecomCodeReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "登录成功",
                         "schema": {
                             "allOf": [
                                 {
@@ -205,10 +317,15 @@ const docTemplate = `{
         "handler.LoginResp": {
             "type": "object",
             "properties": {
+                "accessExpiresIn": {
+                    "description": "访问令牌有效期（秒）",
+                    "type": "integer"
+                },
                 "accessToken": {
                     "type": "string"
                 },
-                "expiresIn": {
+                "refreshExpiresIn": {
+                    "description": "刷新令牌有效期（秒）",
                     "type": "integer"
                 },
                 "refreshToken": {
@@ -249,6 +366,17 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.wecomCodeReq": {
+            "type": "object",
+            "required": [
+                "code"
+            ],
+            "properties": {
+                "code": {
                     "type": "string"
                 }
             }
