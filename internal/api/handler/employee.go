@@ -47,20 +47,21 @@ type CreateEmployeeReq struct {
 	DeptID   uint   `json:"deptId" binding:"required"`
 	RoleID   uint   `json:"roleId" binding:"required"`
 	Username string `json:"username" binding:"required,min=3,max=64"`
-	Password string `json:"password" binding:"required,min=6,max=64"`
+	Password string `json:"password" binding:"omitempty,min=6,max=64"` // 企业微信员工可留空
 	Name     string `json:"name" binding:"required,max=64"`
-	Phone    string `json:"phone" binding:"max=20"`
+	Phone    string `json:"phone" binding:"required,max=20"` // 企业微信绑定键，必填
 	Email    string `json:"email" binding:"max=128"`
 	Status   int8   `json:"status" binding:"oneof=0 1"`
 }
 
 type UpdateEmployeeReq struct {
-	DeptID   uint   `json:"deptId"`
-	RoleID   uint   `json:"roleId"`
-	Name     string `json:"name" binding:"max=64"`
-	Phone    string `json:"phone" binding:"max=20"`
-	Email    string `json:"email" binding:"max=128"`
-	Status   int8   `json:"status" binding:"oneof=0 1"`
+	DeptID      uint    `json:"deptId"`
+	RoleID      uint    `json:"roleId"`
+	Name        string  `json:"name" binding:"max=64"`
+	Phone       string  `json:"phone" binding:"max=20"`
+	Email       string  `json:"email" binding:"max=128"`
+	Status      int8    `json:"status" binding:"oneof=0 1"`
+	WecomUserID *string `json:"wecomUserId"` // 指针：未传=不变；传空串=解绑
 }
 
 func (h *EmployeeHandler) ListEmployees(c *gin.Context) {
@@ -129,14 +130,29 @@ func (h *EmployeeHandler) CreateEmployee(c *gin.Context) {
 		response.Fail(c, response.CodeBadRequest, "用户名已存在")
 		return
 	}
+	// 检查手机号是否重复（企业微信绑定键，公司内唯一）
+	h.db.Model(&model.Employee{}).Where("company_id = ? AND phone = ?", companyID, req.Phone).Count(&count)
+	if count > 0 {
+		response.Fail(c, response.CodeDuplicate, "手机号已存在")
+		return
+	}
 
-	hashedPwd, _ := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	// 密码选填：企业微信登录员工无需密码
+	var hashedPwd string
+	if req.Password != "" {
+		b, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+		if err != nil {
+			response.ServerError(c, "密码加密失败")
+			return
+		}
+		hashedPwd = string(b)
+	}
 	emp := model.Employee{
 		BaseModelWithCompany: model.BaseModelWithCompany{CompanyID: companyID},
 		DeptID:               req.DeptID,
 		RoleID:               req.RoleID,
 		Username:             req.Username,
-		Password:             string(hashedPwd),
+		Password:             hashedPwd,
 		Name:                 req.Name,
 		Phone:                req.Phone,
 		Email:                req.Email,
@@ -188,11 +204,21 @@ func (h *EmployeeHandler) UpdateEmployee(c *gin.Context) {
 	if req.Name != "" {
 		emp.Name = req.Name
 	}
-	if req.Phone != "" {
+	if req.Phone != "" && req.Phone != emp.Phone {
+		var phoneCount int64
+		h.db.Model(&model.Employee{}).Where("company_id = ? AND phone = ? AND id != ?", companyID, req.Phone, emp.ID).Count(&phoneCount)
+		if phoneCount > 0 {
+			response.Fail(c, response.CodeDuplicate, "手机号已存在")
+			return
+		}
 		emp.Phone = req.Phone
 	}
 	if req.Email != "" {
 		emp.Email = req.Email
+	}
+	// 企业微信解绑：显式传空串清除绑定（未传则保持原值）
+	if req.WecomUserID != nil {
+		emp.WecomUserID = *req.WecomUserID
 	}
 	emp.Status = req.Status
 
