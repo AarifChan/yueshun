@@ -36,6 +36,8 @@ Thumbs.db
 /build/
 /dist/
 /bin/
+frontend/dist/
+frontend/node_modules/
 
 # Logs
 *.log

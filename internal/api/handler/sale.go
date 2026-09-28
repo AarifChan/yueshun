@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"strconv"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	"gorm.io/gorm"
 	"zhizhang-server/internal/api/middleware"
 	"zhizhang-server/internal/model"
+	"zhizhang-server/internal/pkg/database"
 	"zhizhang-server/internal/pkg/response"
 )
 
@@ -26,6 +28,7 @@ func (h *SaleHandler) RegisterRoutes(r *gin.RouterGroup) {
 	{
 		so.GET("", h.ListSaleOrders)
 		so.POST("", h.CreateSaleOrder)
+		so.GET("/history-price", h.HistoryPrice)
 		so.GET("/:id", h.GetSaleOrder)
 		so.PUT("/:id", h.UpdateSaleOrder)
 		so.DELETE("/:id", h.DeleteSaleOrder)
@@ -112,6 +115,50 @@ func (h *SaleHandler) ListSaleOrders(c *gin.Context) {
 	query.Order("created_at DESC").Offset((req.Page - 1) * req.PageSize).Limit(req.PageSize).Find(&list)
 
 	response.OkWithPage(c, list, req.Page, req.PageSize, int(total))
+}
+
+// HistoryPrice 历史售价：查询客户最近一次购买某商品的价格
+func (h *SaleHandler) HistoryPrice(c *gin.Context) {
+	customerID, err := strconv.ParseUint(c.Query("customerId"), 10, 64)
+	if err != nil || customerID == 0 {
+		response.BadRequest(c, "customerId 必填")
+		return
+	}
+	productID, err := strconv.ParseUint(c.Query("productId"), 10, 64)
+	if err != nil || productID == 0 {
+		response.BadRequest(c, "productId 必填")
+		return
+	}
+	companyID := middleware.GetCompanyID(c)
+	if companyID == 0 {
+		response.Unauthorized(c, "未登录")
+		return
+	}
+
+	var result struct {
+		Price     float64   `json:"price"`
+		OrderID   uint      `json:"orderId"`
+		OrderNo   string    `json:"orderNo"`
+		OrderDate time.Time `json:"date"`
+	}
+	query := h.db.Table("sales_order_items AS i").
+		Select("i.price, o.id AS order_id, o.order_no, o.order_date").
+		Joins("JOIN sales_orders o ON o.id = i.order_id").
+		Where("o.company_id = ? AND o.customer_id = ? AND o.status <> 'cancelled' AND i.product_id = ?", companyID, customerID, productID).
+		Order("o.created_at DESC").
+		Limit(1).
+		Scan(&result)
+	if query.Error != nil {
+		log.Error().Err(query.Error).Msg("query history price failed")
+		response.ServerError(c, "查询失败")
+		return
+	}
+	if query.RowsAffected == 0 {
+		response.Ok(c, nil)
+		return
+	}
+
+	response.Ok(c, result)
 }
 
 func (h *SaleHandler) GetSaleOrder(c *gin.Context) {
@@ -364,6 +411,11 @@ func (h *SaleHandler) ConfirmSaleOrder(c *gin.Context) {
 		log.Error().Err(err).Msg("confirm sale order failed")
 		response.ServerError(c, "确认失败")
 		return
+	}
+	// 回写客户最近下单时间
+	now := time.Now()
+	if err := h.db.Model(&model.Customer{}).Where("id = ? AND company_id = ?", order.CustomerID, companyID).UpdateColumn("last_order_at", now).Error; err != nil {
+		log.Error().Err(err).Msg("update customer last order at failed")
 	}
 	response.OkWithMessage(c, "确认成功", nil)
 }
@@ -697,12 +749,21 @@ func (h *SaleHandler) CompleteOutStock(c *gin.Context) {
 			return err
 		}
 		for _, item := range outStock.Items {
-			if err := tx.Model(&model.Product{}).Where("id = ?", item.ProductID).UpdateColumn("stock", gorm.Expr("stock - ?", item.Quantity)).Error; err != nil {
+			if err := database.ChangeStock(tx, companyID, outStock.WarehouseID, item.ProductID, -item.Quantity); err != nil {
 				return err
 			}
 		}
+		// 出库挂账：客户应收（欠款）增加
+		if err := tx.Model(&model.Customer{}).Where("id = ?", outStock.CustomerID).
+			UpdateColumn("balance", gorm.Expr("balance + ?", outStock.TotalAmount)).Error; err != nil {
+			return err
+		}
 		return nil
 	}); err != nil {
+		if errors.Is(err, database.ErrStockNotEnough) {
+			response.Fail(c, response.CodeBadRequest, err.Error())
+			return
+		}
 		log.Error().Err(err).Msg("complete sale outstock failed")
 		response.ServerError(c, "完成出库失败")
 		return
@@ -990,9 +1051,14 @@ func (h *SaleHandler) CompleteSaleReturn(c *gin.Context) {
 			return err
 		}
 		for _, item := range saleRet.Items {
-			if err := tx.Model(&model.Product{}).Where("id = ?", item.ProductID).UpdateColumn("stock", gorm.Expr("stock + ?", item.Quantity)).Error; err != nil {
+			if err := database.ChangeStock(tx, companyID, saleRet.WarehouseID, item.ProductID, item.Quantity); err != nil {
 				return err
 			}
+		}
+		// 退货冲减客户应收（欠款）
+		if err := tx.Model(&model.Customer{}).Where("id = ?", saleRet.CustomerID).
+			UpdateColumn("balance", gorm.Expr("balance - ?", saleRet.TotalAmount)).Error; err != nil {
+			return err
 		}
 		return nil
 	}); err != nil {
@@ -1279,7 +1345,22 @@ func (h *SaleHandler) CompleteReceipt(c *gin.Context) {
 		if err := tx.Save(&receipt).Error; err != nil {
 			return err
 		}
-		if err := tx.Model(&model.Customer{}).Where("id = ?", receipt.CustomerID).UpdateColumn("balance", gorm.Expr("balance + ?", receipt.TotalAmount)).Error; err != nil {
+		if err := tx.Model(&model.Customer{}).Where("id = ?", receipt.CustomerID).UpdateColumn("balance", gorm.Expr("balance - ?", receipt.TotalAmount)).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&model.Account{}).Where("id = ? AND company_id = ?", receipt.AccountID, companyID).UpdateColumn("balance", gorm.Expr("balance + ?", receipt.TotalAmount)).Error; err != nil {
+			return err
+		}
+		flow := model.AccountFlow{
+			BaseModelWithCompany: model.BaseModelWithCompany{CompanyID: companyID},
+			AccountID:            receipt.AccountID,
+			Type:                 "income",
+			Amount:               receipt.TotalAmount,
+			RefType:              "sales_receipt",
+			RefID:                receipt.ID,
+			Remark:               receipt.BillNo,
+		}
+		if err := tx.Create(&flow).Error; err != nil {
 			return err
 		}
 		for _, item := range receipt.Items {

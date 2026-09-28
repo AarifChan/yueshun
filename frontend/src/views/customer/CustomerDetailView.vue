@@ -19,6 +19,7 @@
           <el-col :span="8"><el-form-item label="邮箱"><el-input v-model="form.email" /></el-form-item></el-col>
           <el-col :span="8"><el-form-item label="信用额度"><el-input-number v-model="form.creditLimit" :precision="2" :min="0" style="width:100%" /></el-form-item></el-col>
           <el-col :span="8"><el-form-item label="账期"><el-input-number v-model="form.creditDays" :min="0" style="width:100%" /></el-form-item></el-col>
+          <el-col :span="8"><el-form-item label="欠款余额"><el-input :model-value="form.balance != null ? `¥${Number(form.balance).toFixed(2)}` : '-'" disabled /></el-form-item></el-col>
         </el-row>
         <el-form-item label="地址"><el-input v-model="form.address" /></el-form-item>
         <el-form-item label="状态"><el-switch v-model="form.status" :active-value="1" :inactive-value="0" /></el-form-item>

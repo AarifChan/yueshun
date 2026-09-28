@@ -40,8 +40,9 @@ export function useCrud<T extends Record<string, any>>(options: CrudOptions<T>) 
       })
       if (res.data.code === 0 || res.data.code === 200) {
         const data = res.data.data
-        list.value = data.list || data.items || data || []
-        total.value = data.total || data.length || 0
+        const rows = Array.isArray(data) ? data : (data?.list ?? data?.items ?? [])
+        list.value = Array.isArray(rows) ? rows : []
+        total.value = data?.total ?? list.value.length
       }
     } catch (error: any) {
       ElMessage.error(error.message || '获取列表失败')

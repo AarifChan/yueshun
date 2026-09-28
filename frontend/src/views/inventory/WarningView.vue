@@ -2,7 +2,13 @@
   <div class="page">
     <el-card>
       <template #header>
-        <div class="card-header"><span>库存预警</span><el-button type="primary" @click="openCreate">新增预警</el-button></div>
+        <div class="card-header">
+          <span>库存预警</span>
+          <div>
+            <el-button type="warning" :loading="refreshing" @click="handleRefresh">刷新预警</el-button>
+            <el-button type="primary" @click="openCreate">新增预警</el-button>
+          </div>
+        </div>
       </template>
       <el-form :model="searchForm" inline class="search-form">
         <el-form-item label="仓库"><RemoteSelect v-model="searchForm.warehouseId" api-url="/api/v1/warehouses" placeholder="仓库" /></el-form-item>
@@ -49,12 +55,32 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
+import { ElMessage } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
 import RemoteSelect from '@/components/RemoteSelect.vue'
+import api from '@/api/client'
 
 const crud = useCrud<any>({ baseUrl: '/api/v1/inventory-warnings', defaultForm: () => ({}) })
 const { list, total, loading, dialogVisible, dialogTitle, form, searchForm, pagination, fetchList, openCreate, openEdit, handleSubmit, handleDelete, handleSearch, handleReset, handleSizeChange, handleCurrentChange } = crud
 fetchList()
+
+const refreshing = ref(false)
+async function handleRefresh() {
+  refreshing.value = true
+  try {
+    const res = await api.post('/api/v1/inventory-warnings/refresh')
+    if (res.data.code === 0 || res.data.code === 200) {
+      const d = res.data.data || {}
+      ElMessage.success(`新增 ${d.created ?? 0} 条，更新 ${d.updated ?? 0} 条，解除 ${d.resolved ?? 0} 条`)
+      fetchList()
+    }
+  } catch {
+    // 拦截器已提示错误
+  } finally {
+    refreshing.value = false
+  }
+}
 </script>
 
 <style scoped>

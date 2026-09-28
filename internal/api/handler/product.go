@@ -43,6 +43,8 @@ func (h *ProductHandler) RegisterRoutes(r *gin.RouterGroup) {
 		product.PUT("/:id", h.UpdateProduct)
 		product.DELETE("/:id", h.DeleteProduct)
 		product.PUT("/:id/status", h.UpdateProductStatus)
+		product.PUT("/:id/units", h.ReplaceProductUnits)
+		product.PUT("/:id/barcodes", h.ReplaceProductBarcodes)
 	}
 }
 
@@ -436,8 +438,9 @@ type UpdateProductReq struct {
 
 type ProductResp struct {
 	model.Product
-	CategoryName string `json:"categoryName"`
-	BrandName    string `json:"brandName"`
+	CategoryName string  `json:"categoryName"`
+	BrandName    string  `json:"brandName"`
+	TotalStock   float64 `json:"totalStock"`
 }
 
 func (h *ProductHandler) ListProducts(c *gin.Context) {
@@ -471,7 +474,7 @@ func (h *ProductHandler) ListProducts(c *gin.Context) {
 	query.Count(&total)
 
 	var list []ProductResp
-	query.Select("products.*, product_categories.name as category_name, brands.name as brand_name").
+	query.Select("products.*, product_categories.name as category_name, brands.name as brand_name, (SELECT COALESCE(SUM(stocks.quantity),0) FROM stocks WHERE stocks.product_id = products.id) as total_stock").
 		Joins("LEFT JOIN product_categories ON product_categories.id = products.category_id").
 		Joins("LEFT JOIN brands ON brands.id = products.brand_id").
 		Order("products.created_at DESC").
@@ -503,10 +506,16 @@ func (h *ProductHandler) GetProduct(c *gin.Context) {
 	var barcodes []model.ProductBarcode
 	h.db.Where("product_id = ? AND status = 1", id).Find(&barcodes)
 
+	// 获取总库存（所有仓库合计）
+	var totalStock float64
+	h.db.Model(&model.Stock{}).Where("product_id = ? AND company_id = ?", id, companyID).
+		Select("COALESCE(SUM(quantity),0)").Scan(&totalStock)
+
 	response.Ok(c, gin.H{
-		"product":   product,
-		"units":     units,
-		"barcodes":  barcodes,
+		"product":    product,
+		"units":      units,
+		"barcodes":   barcodes,
+		"totalStock": totalStock,
 	})
 }
 
@@ -700,4 +709,110 @@ func (h *ProductHandler) UpdateProductStatus(c *gin.Context) {
 		return
 	}
 	response.OkWithMessage(c, "更新成功", nil)
+}
+
+// ReplaceProductUnits 替换商品的辅助单位（全量覆盖）
+func (h *ProductHandler) ReplaceProductUnits(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "ID 格式错误")
+		return
+	}
+	var req struct {
+		Units []ProductUnitReq `json:"units" binding:"omitempty,dive"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "请求参数错误: "+err.Error())
+		return
+	}
+	companyID := middleware.GetCompanyID(c)
+
+	var product model.Product
+	if err := h.db.Where("id = ? AND company_id = ?", id, companyID).First(&product).Error; err != nil {
+		response.NotFound(c, "商品不存在")
+		return
+	}
+
+	if err := h.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("product_id = ?", product.ID).Delete(&model.ProductUnit{}).Error; err != nil {
+			return err
+		}
+		for _, u := range req.Units {
+			unit := model.ProductUnit{
+				ProductID:  product.ID,
+				Name:       u.Name,
+				Conversion: u.Conversion,
+				IsDefault:  u.IsDefault,
+				Status:     1,
+			}
+			if err := tx.Create(&unit).Error; err != nil {
+				return err
+			}
+			// 单位自带条码时同步到条码表
+			if u.Barcode != "" {
+				if err := tx.Create(&model.ProductBarcode{
+					ProductID: product.ID,
+					UnitID:    unit.ID,
+					Barcode:   u.Barcode,
+					Status:    1,
+				}).Error; err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}); err != nil {
+		log.Error().Err(err).Msg("replace product units failed")
+		response.ServerError(c, "保存失败")
+		return
+	}
+	response.OkWithMessage(c, "保存成功", nil)
+}
+
+// ReplaceProductBarcodes 替换商品的条码（全量覆盖）
+func (h *ProductHandler) ReplaceProductBarcodes(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "ID 格式错误")
+		return
+	}
+	var req struct {
+		Barcodes []struct {
+			UnitID  uint   `json:"unitId"`
+			Barcode string `json:"barcode" binding:"required,max=64"`
+		} `json:"barcodes" binding:"omitempty,dive"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "请求参数错误: "+err.Error())
+		return
+	}
+	companyID := middleware.GetCompanyID(c)
+
+	var product model.Product
+	if err := h.db.Where("id = ? AND company_id = ?", id, companyID).First(&product).Error; err != nil {
+		response.NotFound(c, "商品不存在")
+		return
+	}
+
+	if err := h.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("product_id = ?", product.ID).Delete(&model.ProductBarcode{}).Error; err != nil {
+			return err
+		}
+		for _, b := range req.Barcodes {
+			if err := tx.Create(&model.ProductBarcode{
+				ProductID: product.ID,
+				UnitID:    b.UnitID,
+				Barcode:   b.Barcode,
+				Status:    1,
+			}).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		log.Error().Err(err).Msg("replace product barcodes failed")
+		response.ServerError(c, "保存失败")
+		return
+	}
+	response.OkWithMessage(c, "保存成功", nil)
 }

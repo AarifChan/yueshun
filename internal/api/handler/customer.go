@@ -2,6 +2,7 @@ package handler
 
 import (
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
@@ -44,6 +45,7 @@ func (h *CustomerHandler) RegisterRoutes(r *gin.RouterGroup) {
 		// 客户
 		customer.GET("", h.ListCustomers)
 		customer.POST("", h.CreateCustomer)
+		customer.GET("/churn-risk", h.ChurnRisk)
 		customer.GET("/:id", h.GetCustomer)
 		customer.PUT("/:id", h.UpdateCustomer)
 		customer.DELETE("/:id", h.DeleteCustomer)
@@ -506,6 +508,53 @@ type CustomerResp struct {
 	CategoryName string `json:"categoryName"`
 	RegionName   string `json:"regionName"`
 	LevelName    string `json:"levelName"`
+}
+
+// ChurnRisk 客户流失预警：超过 N 天未下单的启用客户
+func (h *CustomerHandler) ChurnRisk(c *gin.Context) {
+	days := 90
+	if v := c.Query("days"); v != "" {
+		parsed, err := strconv.Atoi(v)
+		if err != nil || parsed <= 0 {
+			response.BadRequest(c, "days 参数错误")
+			return
+		}
+		days = parsed
+	}
+	companyID := middleware.GetCompanyID(c)
+	if companyID == 0 {
+		response.Unauthorized(c, "未登录")
+		return
+	}
+
+	cutoff := time.Now().AddDate(0, 0, -days)
+	var customers []model.Customer
+	if err := h.db.Where("company_id = ? AND status = 1 AND (last_order_at IS NULL OR last_order_at < ?)", companyID, cutoff).
+		Order("last_order_at ASC NULLS FIRST").
+		Find(&customers).Error; err != nil {
+		log.Error().Err(err).Msg("query churn risk customers failed")
+		response.ServerError(c, "查询失败")
+		return
+	}
+
+	now := time.Now()
+	list := make([]gin.H, 0, len(customers))
+	for _, cust := range customers {
+		var daysSinceOrder interface{}
+		if cust.LastOrderAt != nil {
+			daysSinceOrder = int(now.Sub(*cust.LastOrderAt).Hours() / 24)
+		}
+		list = append(list, gin.H{
+			"id":             cust.ID,
+			"code":           cust.Code,
+			"name":           cust.Name,
+			"phone":          cust.Phone,
+			"lastOrderAt":    cust.LastOrderAt,
+			"daysSinceOrder": daysSinceOrder,
+		})
+	}
+
+	response.Ok(c, gin.H{"list": list})
 }
 
 func (h *CustomerHandler) ListCustomers(c *gin.Context) {

@@ -11,7 +11,12 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "vue": "^3.5.34"
+    "@element-plus/icons-vue": "^2.3.2",
+    "axios": "^1.20.0",
+    "element-plus": "^2.14.6",
+    "pinia": "^4.0.3",
+    "vue": "^3.5.34",
+    "vue-router": "^4.6.4"
   },
   "devDependencies": {
     "@types/node": "^24.12.3",

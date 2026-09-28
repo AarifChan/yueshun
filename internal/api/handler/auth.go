@@ -45,12 +45,16 @@ type RefreshReq struct {
 
 // AuthHandler 认证处理器
 type AuthHandler struct {
-	db *gorm.DB
+	db    *gorm.DB
+	wecom *WeComConfig
 }
 
 // NewAuthHandler 创建认证处理器
-func NewAuthHandler(db *gorm.DB) *AuthHandler {
-	return &AuthHandler{db: db}
+func NewAuthHandler(db *gorm.DB, wecom *WeComConfig) *AuthHandler {
+	if wecom == nil {
+		wecom = &WeComConfig{}
+	}
+	return &AuthHandler{db: db, wecom: wecom}
 }
 
 // RegisterRoutes 注册路由
@@ -61,6 +65,11 @@ func (h *AuthHandler) RegisterRoutes(r *gin.RouterGroup) {
 		auth.POST("/refresh", h.Refresh)
 		auth.POST("/logout", middleware.JWTMiddleware(), h.Logout)
 		auth.GET("/me", middleware.JWTMiddleware(), h.Me)
+
+		// 企业微信登录（公开）
+		auth.GET("/wecom/status", h.WeComStatus)
+		auth.GET("/wecom/qrcode-url", h.WeComQRCodeURL)
+		auth.GET("/wecom/callback", h.WeComCallback)
 	}
 }
 
@@ -101,27 +110,35 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	// 生成令牌
+	resp, err := h.issueTokens(c, &emp)
+	if err != nil {
+		response.ServerError(c, "令牌生成失败")
+		return
+	}
+
+	response.Ok(c, resp)
+}
+
+// issueTokens 签发登录令牌并更新登录信息
+func (h *AuthHandler) issueTokens(c *gin.Context, emp *model.Employee) (*LoginResp, error) {
 	accessToken, err := middleware.GenerateToken(emp.ID, emp.Username, emp.RoleID, emp.DeptID, emp.CompanyID)
 	if err != nil {
 		log.Error().Err(err).Msg("generate access token failed")
-		response.ServerError(c, "令牌生成失败")
-		return
+		return nil, err
 	}
 
 	refreshToken, err := middleware.GenerateRefreshToken(emp.ID)
 	if err != nil {
 		log.Error().Err(err).Msg("generate refresh token failed")
-		response.ServerError(c, "令牌生成失败")
-		return
+		return nil, err
 	}
 
-	// 更新登录时间
 	now := time.Now()
 	emp.LastLoginAt = &now
 	emp.LastLoginIP = c.ClientIP()
-	h.db.Save(&emp)
+	h.db.Save(emp)
 
-	resp := LoginResp{
+	return &LoginResp{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		ExpiresIn:    7200,
@@ -133,9 +150,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 			RoleID:   emp.RoleID,
 			DeptID:   emp.DeptID,
 		},
-	}
-
-	response.Ok(c, resp)
+	}, nil
 }
 
 // Refresh 刷新访问令牌

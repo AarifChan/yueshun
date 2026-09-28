@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"strconv"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	"gorm.io/gorm"
 	"zhizhang-server/internal/api/middleware"
 	"zhizhang-server/internal/model"
+	"zhizhang-server/internal/pkg/database"
 	"zhizhang-server/internal/pkg/response"
 )
 
@@ -26,6 +28,7 @@ func (h *PurchaseHandler) RegisterRoutes(r *gin.RouterGroup) {
 	{
 		po.GET("", h.ListOrders)
 		po.POST("", h.CreateOrder)
+		po.GET("/replenish-suggestions", h.ReplenishSuggestions)
 		po.GET("/:id", h.GetOrder)
 		po.PUT("/:id", h.UpdateOrder)
 		po.DELETE("/:id", h.DeleteOrder)
@@ -112,6 +115,57 @@ func (h *PurchaseHandler) ListOrders(c *gin.Context) {
 	query.Order("created_at DESC").Offset((req.Page - 1) * req.PageSize).Limit(req.PageSize).Find(&list)
 
 	response.OkWithPage(c, list, req.Page, req.PageSize, int(total))
+}
+
+// ReplenishSuggestions 智能补货建议：总库存低于最低库存的启用商品
+func (h *PurchaseHandler) ReplenishSuggestions(c *gin.Context) {
+	companyID := middleware.GetCompanyID(c)
+	if companyID == 0 {
+		response.Unauthorized(c, "未登录")
+		return
+	}
+
+	type row struct {
+		ProductID    uint    `json:"productId"`
+		ProductCode  string  `json:"productCode"`
+		ProductName  string  `json:"productName"`
+		Unit         string  `json:"unit"`
+		CurrentStock float64 `json:"currentStock"`
+		MinStock     float64 `json:"minStock"`
+		MaxStock     float64 `json:"maxStock"`
+	}
+	var rows []row
+	err := h.db.Table("products AS p").
+		Select("p.id AS product_id, p.code AS product_code, p.name AS product_name, p.unit, COALESCE(s.total, 0) AS current_stock, p.min_stock, p.max_stock").
+		Joins("LEFT JOIN (SELECT product_id, SUM(quantity) AS total FROM stocks WHERE company_id = ? GROUP BY product_id) s ON s.product_id = p.id", companyID).
+		Where("p.company_id = ? AND p.status = 1 AND COALESCE(s.total, 0) < p.min_stock", companyID).
+		Order("(p.min_stock - COALESCE(s.total, 0)) DESC").
+		Scan(&rows).Error
+	if err != nil {
+		log.Error().Err(err).Msg("query replenish suggestions failed")
+		response.ServerError(c, "查询失败")
+		return
+	}
+
+	list := make([]gin.H, 0, len(rows))
+	for _, r := range rows {
+		suggestQty := r.MaxStock - r.CurrentStock
+		if r.MaxStock <= 0 {
+			suggestQty = r.MinStock*2 - r.CurrentStock
+		}
+		list = append(list, gin.H{
+			"productId":    r.ProductID,
+			"productCode":  r.ProductCode,
+			"productName":  r.ProductName,
+			"unit":         r.Unit,
+			"currentStock": r.CurrentStock,
+			"minStock":     r.MinStock,
+			"maxStock":     r.MaxStock,
+			"suggestQty":   suggestQty,
+		})
+	}
+
+	response.Ok(c, gin.H{"list": list})
 }
 
 func (h *PurchaseHandler) GetOrder(c *gin.Context) {
@@ -702,7 +756,7 @@ func (h *PurchaseHandler) CompleteInStock(c *gin.Context) {
 			return err
 		}
 		for _, item := range inStock.Items {
-			if err := tx.Model(&model.Product{}).Where("id = ?", item.ProductID).UpdateColumn("stock", gorm.Expr("stock + ?", item.Quantity)).Error; err != nil {
+			if err := database.ChangeStock(tx, companyID, inStock.WarehouseID, item.ProductID, item.Quantity); err != nil {
 				return err
 			}
 		}
@@ -995,12 +1049,16 @@ func (h *PurchaseHandler) CompleteReturn(c *gin.Context) {
 			return err
 		}
 		for _, item := range ret.Items {
-			if err := tx.Model(&model.Product{}).Where("id = ?", item.ProductID).UpdateColumn("stock", gorm.Expr("stock - ?", item.Quantity)).Error; err != nil {
+			if err := database.ChangeStock(tx, companyID, ret.WarehouseID, item.ProductID, -item.Quantity); err != nil {
 				return err
 			}
 		}
 		return nil
 	}); err != nil {
+		if errors.Is(err, database.ErrStockNotEnough) {
+			response.Fail(c, response.CodeBadRequest, err.Error())
+			return
+		}
 		log.Error().Err(err).Msg("complete purchase return failed")
 		response.ServerError(c, "完成退货失败")
 		return
@@ -1285,6 +1343,21 @@ func (h *PurchaseHandler) CompletePayment(c *gin.Context) {
 			return err
 		}
 		if err := tx.Model(&model.Customer{}).Where("id = ?", payment.SupplierID).UpdateColumn("balance", gorm.Expr("balance - ?", payment.TotalAmount)).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&model.Account{}).Where("id = ? AND company_id = ?", payment.AccountID, companyID).UpdateColumn("balance", gorm.Expr("balance - ?", payment.TotalAmount)).Error; err != nil {
+			return err
+		}
+		flow := model.AccountFlow{
+			BaseModelWithCompany: model.BaseModelWithCompany{CompanyID: companyID},
+			AccountID:            payment.AccountID,
+			Type:                 "expense",
+			Amount:               payment.TotalAmount,
+			RefType:              "purchase_payment",
+			RefID:                payment.ID,
+			Remark:               payment.BillNo,
+		}
+		if err := tx.Create(&flow).Error; err != nil {
 			return err
 		}
 		for _, item := range payment.Items {

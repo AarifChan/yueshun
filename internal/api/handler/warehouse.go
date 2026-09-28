@@ -43,6 +43,14 @@ func (h *WarehouseHandler) RegisterRoutes(r *gin.RouterGroup) {
 		account.POST("", h.CreateAccount)
 		account.PUT("/:id", h.UpdateAccount)
 		account.DELETE("/:id", h.DeleteAccount)
+		account.GET("/:id", h.GetAccount)
+		account.GET("/:id/flows", h.ListAccountFlows)
+	}
+
+	// 库存台账
+	stocks := r.Group("/stocks")
+	{
+		stocks.GET("", h.ListStocks)
 	}
 
 	// 收支项目
@@ -360,6 +368,22 @@ func (h *WarehouseHandler) CreateAccount(c *gin.Context) {
 	response.Ok(c, account)
 }
 
+func (h *WarehouseHandler) GetAccount(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "ID 格式错误")
+		return
+	}
+	companyID := middleware.GetCompanyID(c)
+
+	var account model.Account
+	if err := h.db.Where("id = ? AND company_id = ?", id, companyID).First(&account).Error; err != nil {
+		response.NotFound(c, "账户不存在")
+		return
+	}
+	response.Ok(c, account)
+}
+
 func (h *WarehouseHandler) UpdateAccount(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -421,6 +445,113 @@ func (h *WarehouseHandler) DeleteAccount(c *gin.Context) {
 		return
 	}
 	response.OkWithMessage(c, "删除成功", nil)
+}
+
+// ==================== 资金流水 ====================
+
+type AccountFlowListReq struct {
+	Page     int `form:"page,default=1"`
+	PageSize int `form:"pageSize,default=20"`
+}
+
+func (h *WarehouseHandler) ListAccountFlows(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "ID 格式错误")
+		return
+	}
+	var req AccountFlowListReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		response.BadRequest(c, "请求参数错误")
+		return
+	}
+	companyID := middleware.GetCompanyID(c)
+	if companyID == 0 {
+		response.Unauthorized(c, "未登录")
+		return
+	}
+
+	query := h.db.Model(&model.AccountFlow{}).Where("account_id = ? AND company_id = ?", id, companyID)
+
+	var total int64
+	query.Count(&total)
+
+	var list []model.AccountFlow
+	query.Order("created_at DESC").Offset((req.Page - 1) * req.PageSize).Limit(req.PageSize).Find(&list)
+
+	response.OkWithPage(c, list, req.Page, req.PageSize, int(total))
+}
+
+// ==================== 库存台账 ====================
+
+type StockListReq struct {
+	Page        int    `form:"page,default=1"`
+	PageSize    int    `form:"pageSize,default=20"`
+	WarehouseID uint   `form:"warehouseId"`
+	ProductID   uint   `form:"productId"`
+	Keyword     string `form:"keyword"`
+}
+
+type StockResp struct {
+	model.Stock
+	ProductName     string `json:"productName"`
+	ProductCode     string `json:"productCode"`
+	ProductUnit     string `json:"productUnit"`
+	WarehouseName   string `json:"warehouseName"`
+}
+
+func (h *WarehouseHandler) ListStocks(c *gin.Context) {
+	var req StockListReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		response.BadRequest(c, "请求参数错误")
+		return
+	}
+	companyID := middleware.GetCompanyID(c)
+	if companyID == 0 {
+		response.Unauthorized(c, "未登录")
+		return
+	}
+
+	query := h.db.Model(&model.Stock{}).Where("stocks.company_id = ?", companyID)
+	if req.WarehouseID > 0 {
+		query = query.Where("stocks.warehouse_id = ?", req.WarehouseID)
+	}
+	if req.ProductID > 0 {
+		query = query.Where("stocks.product_id = ?", req.ProductID)
+	}
+	if req.Keyword != "" {
+		query = query.Where("products.name LIKE ? OR products.code LIKE ?", "%"+req.Keyword+"%", "%"+req.Keyword+"%")
+	}
+
+	var total int64
+	query.Joins("LEFT JOIN products ON products.id = stocks.product_id").
+		Distinct("stocks.id").Count(&total)
+
+	// 列表查询使用独立链，避免与 Count 共用 Statement 导致 DISTINCT 残留
+	listQuery := h.db.Model(&model.Stock{}).Where("stocks.company_id = ?", companyID)
+	if req.WarehouseID > 0 {
+		listQuery = listQuery.Where("stocks.warehouse_id = ?", req.WarehouseID)
+	}
+	if req.ProductID > 0 {
+		listQuery = listQuery.Where("stocks.product_id = ?", req.ProductID)
+	}
+	if req.Keyword != "" {
+		listQuery = listQuery.Where("products.name LIKE ? OR products.code LIKE ?", "%"+req.Keyword+"%", "%"+req.Keyword+"%")
+	}
+
+	var list []StockResp
+	if err := listQuery.Select("stocks.*, products.name as product_name, products.code as product_code, products.unit as product_unit, warehouses.name as warehouse_name").
+		Joins("LEFT JOIN products ON products.id = stocks.product_id").
+		Joins("LEFT JOIN warehouses ON warehouses.id = stocks.warehouse_id").
+		Order("stocks.updated_at DESC").
+		Offset((req.Page - 1) * req.PageSize).Limit(req.PageSize).
+		Scan(&list).Error; err != nil {
+		log.Error().Err(err).Msg("list stocks failed")
+		response.ServerError(c, "查询失败")
+		return
+	}
+
+	response.OkWithPage(c, list, req.Page, req.PageSize, int(total))
 }
 
 // ==================== 收支项目 ====================

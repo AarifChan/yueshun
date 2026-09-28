@@ -63,8 +63,9 @@ async function handleSearch(query: string) {
       params: { keyword: query, pageSize: 50, ...props.params },
     })
     if (res.data.code === 0 || res.data.code === 200) {
-      const data = res.data.data.list || res.data.data || []
-      options.value = data.map((item: any) => ({
+      const data = res.data.data
+      const rows = Array.isArray(data) ? data : (data?.list ?? [])
+      options.value = (Array.isArray(rows) ? rows : []).map((item: any) => ({
         label: item[props.labelKey],
         value: item[props.valueKey],
       }))

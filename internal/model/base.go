@@ -33,6 +33,7 @@ type Employee struct {
 	Status       int8      `json:"status" gorm:"default:1;comment:1启用 0禁用"`
 	LastLoginAt  *time.Time `json:"lastLoginAt"`
 	LastLoginIP  string    `json:"lastLoginIp" gorm:"size:64"`
+	WeComUserID  string    `json:"wecomUserId" gorm:"size:64;index;comment:企业微信UserID"`
 }
 
 // Role 角色
@@ -171,6 +172,39 @@ type ProductBarcode struct {
 	Status    int8   `json:"status" gorm:"default:1"`
 }
 
+// GoodsUnit 商品单位（字典）
+type GoodsUnit struct {
+	BaseModelWithCompany
+	Name   string `json:"name" gorm:"size:32;not null"`
+	Code   string `json:"code" gorm:"size:32;index"`
+	Status int8   `json:"status" gorm:"default:1"`
+}
+
+// ProductSpec 商品规格（如颜色、尺寸）
+type ProductSpec struct {
+	BaseModelWithCompany
+	Name   string `json:"name" gorm:"size:64;not null"`
+	Values string `json:"values" gorm:"size:255"` // 可选值，逗号分隔
+	Remark string `json:"remark" gorm:"size:255"`
+	Status int8   `json:"status" gorm:"default:1"`
+}
+
+// ProductTag 商品标签
+type ProductTag struct {
+	BaseModelWithCompany
+	Name   string `json:"name" gorm:"size:64;not null"`
+	Color  string `json:"color" gorm:"size:16;default:'#409EFF'"`
+	Status int8   `json:"status" gorm:"default:1"`
+}
+
+// ProductSalesScope 商品销售范围
+type ProductSalesScope struct {
+	BaseModelWithCompany
+	Name   string `json:"name" gorm:"size:64;not null"`
+	Code   string `json:"code" gorm:"size:32;index"`
+	Status int8   `json:"status" gorm:"default:1"`
+}
+
 // ==================== 客户/供应商模块 ====================
 
 // CustomerCategory 客户分类
@@ -220,6 +254,8 @@ type Customer struct {
 	Address     string  `json:"address" gorm:"size:255"`
 	CreditLimit float64 `json:"creditLimit" gorm:"type:decimal(18,4);default:0"`   // 信用额度
 	CreditDays  int     `json:"creditDays" gorm:"default:0"`                      // 账期天数
+	Balance     float64 `json:"balance" gorm:"type:decimal(18,4);default:0"`      // 欠款余额（正=欠款）
+	LastOrderAt *time.Time `json:"lastOrderAt" gorm:"index"`                    // 最近下单时间
 	TaxNo       string  `json:"taxNo" gorm:"size:64"`                             // 税号
 	BankName    string  `json:"bankName" gorm:"size:128"`
 	BankAccount string  `json:"bankAccount" gorm:"size:64"`
@@ -267,6 +303,29 @@ type IncomeExpenseItem struct {
 	Type     string `json:"type" gorm:"size:10;not null;comment:income收入 expense支出"`
 	Sort     int    `json:"sort" gorm:"default:0"`
 	Status   int8   `json:"status" gorm:"default:1"`
+}
+
+// AccountFlow 资金账户流水
+type AccountFlow struct {
+	BaseModelWithCompany
+	AccountID uint    `json:"accountId" gorm:"index;not null"`
+	Type      string  `json:"type" gorm:"size:10;not null;comment:income收入 expense支出"`
+	Amount    float64 `json:"amount" gorm:"type:decimal(18,4);default:0"`
+	RefType   string  `json:"refType" gorm:"size:32;index"` // 业务类型 sales_receipt|purchase_payment 等
+	RefID     uint    `json:"refId" gorm:"index;default:0"` // 业务单据ID
+	Remark    string  `json:"remark" gorm:"size:255"`
+}
+
+// Stock 库存台账（公司+仓库+商品 维度）
+type Stock struct {
+	BaseModelWithCompany
+	WarehouseID uint    `json:"warehouseId" gorm:"index;not null;uniqueIndex:uniq_stock_wh_product,priority:2"`
+	ProductID   uint    `json:"productId" gorm:"index;not null;uniqueIndex:uniq_stock_wh_product,priority:3"`
+	Quantity    float64 `json:"quantity" gorm:"type:decimal(18,4);default:0"`
+}
+
+func (Stock) TableName() string {
+	return "stocks"
 }
 
 // ==================== 价格体系模块 ====================
@@ -607,13 +666,14 @@ type InventoryTransferItem struct {
 // InventoryWarning 库存预警
 type InventoryWarning struct {
 	BaseModelWithCompany
-	WarehouseID uint    `json:"warehouseId" gorm:"index;not null"`
-	ProductID   uint    `json:"productId" gorm:"index;not null"`
-	MinStock    float64 `json:"minStock" gorm:"type:decimal(18,4);default:0"`
-	MaxStock    float64 `json:"maxStock" gorm:"type:decimal(18,4);default:0"`
+	WarehouseID  uint    `json:"warehouseId" gorm:"index;not null"`
+	ProductID    uint    `json:"productId" gorm:"index;not null"`
+	MinStock     float64 `json:"minStock" gorm:"type:decimal(18,4);default:0"`
+	MaxStock     float64 `json:"maxStock" gorm:"type:decimal(18,4);default:0"`
 	CurrentStock float64 `json:"currentStock" gorm:"type:decimal(18,4);default:0"`
-	Status      string  `json:"status" gorm:"size:20;default:normal;comment:normal正常 low低库存 high高库存"`
-	Remark      string  `json:"remark" gorm:"size:255"`
+	WarningType  string  `json:"warningType" gorm:"size:20;comment:low低库存 high高库存"`
+	Status       string  `json:"status" gorm:"size:20;default:active;comment:active预警中 resolved已解决"`
+	Remark       string  `json:"remark" gorm:"size:255"`
 }
 
 // ==================== 商城模块 ====================

@@ -44,6 +44,7 @@ func (h *MallHandler) RegisterRoutes(r *gin.RouterGroup) {
 		mo.GET("", h.ListMallOrders)
 		mo.POST("", h.CreateMallOrder)
 		mo.GET("/:id", h.GetMallOrder)
+		mo.PUT("/:id", h.UpdateMallOrder)
 		mo.PUT("/:id/pay", h.PayMallOrder)
 		mo.PUT("/:id/ship", h.ShipMallOrder)
 		mo.PUT("/:id/complete", h.CompleteMallOrder)
@@ -429,6 +430,71 @@ func (h *MallHandler) CreateMallOrder(c *gin.Context) {
 	}); err != nil {
 		log.Error().Err(err).Msg("create mall order failed")
 		response.ServerError(c, "创建失败")
+		return
+	}
+
+	response.Ok(c, order)
+}
+
+func (h *MallHandler) UpdateMallOrder(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "ID 格式错误")
+		return
+	}
+	var req CreateMallOrderReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "请求参数错误")
+		return
+	}
+	companyID := middleware.GetCompanyID(c)
+
+	var order model.MallOrder
+	if err := h.db.Where("id = ? AND company_id = ?", id, companyID).First(&order).Error; err != nil {
+		response.NotFound(c, "订单不存在")
+		return
+	}
+	if order.Status != "pending" {
+		response.Fail(c, response.CodeBadRequest, "只有待处理状态的订单可编辑")
+		return
+	}
+
+	order.CustomerID = req.CustomerID
+	order.Remark = req.Remark
+
+	var amount, totalAmount float64
+	items := make([]model.MallOrderItem, len(req.Items))
+	for i, item := range req.Items {
+		itemAmount := item.Quantity * item.Price
+		amount += itemAmount
+		totalAmount += itemAmount
+
+		items[i] = model.MallOrderItem{
+			OrderID:   uint(id),
+			ProductID: item.ProductID,
+			Quantity:  item.Quantity,
+			Price:     item.Price,
+			Amount:    itemAmount,
+			Remark:    item.Remark,
+		}
+	}
+	order.Amount = amount
+	order.TotalAmount = totalAmount
+
+	if err := h.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Save(&order).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("order_id = ?", id).Delete(&model.MallOrderItem{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Create(&items).Error; err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		log.Error().Err(err).Msg("update mall order failed")
+		response.ServerError(c, "更新失败")
 		return
 	}
 

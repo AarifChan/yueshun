@@ -11,18 +11,19 @@ import (
 )
 
 // SetupRouter 配置路由
-func SetupRouter(db *gorm.DB, jwtCfg *middleware.JWTConfig) *gin.Engine {
+func SetupRouter(db *gorm.DB, jwtCfg *middleware.JWTConfig, wecomCfg *handler.WeComConfig) *gin.Engine {
 	// 初始化 JWT
 	middleware.InitJWT(jwtCfg)
 
 	// 初始化处理器
-	authHandler := handler.NewAuthHandler(db)
+	authHandler := handler.NewAuthHandler(db, wecomCfg)
 	dictHandler := handler.NewDictHandler(db)
 	deptHandler := handler.NewDepartmentHandler(db)
 	empHandler := handler.NewEmployeeHandler(db)
 	roleHandler := handler.NewRoleHandler(db)
 	permHandler := handler.NewPermissionHandler(db)
 	productHandler := handler.NewProductHandler(db)
+	productSettingHandler := handler.NewProductSettingHandler(db)
 	customerHandler := handler.NewCustomerHandler(db)
 	warehouseHandler := handler.NewWarehouseHandler(db)
 	priceHandler := handler.NewPriceHandler(db)
@@ -32,6 +33,7 @@ func SetupRouter(db *gorm.DB, jwtCfg *middleware.JWTConfig) *gin.Engine {
 	mallHandler := handler.NewMallHandler(db)
 	crmHandler := handler.NewCRMHandler(db)
 	approvalHandler := handler.NewApprovalHandler(db)
+	statsHandler := handler.NewStatsHandler(db)
 
 	router := gin.New()
 	router.Use(middleware.CORSMiddleware())
@@ -65,6 +67,7 @@ func SetupRouter(db *gorm.DB, jwtCfg *middleware.JWTConfig) *gin.Engine {
 
 			// 商品资料
 			productHandler.RegisterRoutes(authorized)
+			productSettingHandler.RegisterRoutes(authorized)
 
 			// 客户/供应商
 			customerHandler.RegisterRoutes(authorized)
@@ -92,6 +95,9 @@ func SetupRouter(db *gorm.DB, jwtCfg *middleware.JWTConfig) *gin.Engine {
 
 			// 销售模块
 			saleHandler.RegisterRoutes(authorized)
+
+			// 数据统计
+			statsHandler.RegisterRoutes(authorized)
 
 			// 占位
 			authorized.GET("/ping", func(c *gin.Context) {

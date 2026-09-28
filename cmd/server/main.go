@@ -35,6 +35,7 @@ type Config struct {
 	} `mapstructure:"jwt"`
 	Database database.Config `mapstructure:"database"`
 	Redis    redis.Config  `mapstructure:"redis"`
+	WeCom    handler.WeComConfig `mapstructure:"wecom"`
 	Log      struct {
 		Level  string `mapstructure:"level"`
 		Format string `mapstructure:"format"`
@@ -93,7 +94,7 @@ func main() {
 	}
 
 	// 配置路由
-	router := api.SetupRouter(db, jwtCfg)
+	router := api.SetupRouter(db, jwtCfg, &cfg.WeCom)
 
 	// 启动服务
 	addr := fmt.Sprintf(":%d", cfg.App.Port)
@@ -140,7 +141,7 @@ func initLogger(cfg *Config) {
 }
 
 func autoMigrate(db *gorm.DB) error {
-	return db.AutoMigrate(
+	if err := db.AutoMigrate(
 		&model.Company{},
 		&model.Department{},
 		&model.Role{},
@@ -156,6 +157,10 @@ func autoMigrate(db *gorm.DB) error {
 		&model.Product{},
 		&model.ProductUnit{},
 		&model.ProductBarcode{},
+		&model.GoodsUnit{},
+		&model.ProductSpec{},
+		&model.ProductTag{},
+		&model.ProductSalesScope{},
 		// 客户/供应商
 		&model.CustomerCategory{},
 		&model.Region{},
@@ -165,7 +170,10 @@ func autoMigrate(db *gorm.DB) error {
 		&model.Warehouse{},
 		&model.WarehousePosition{},
 		&model.Account{},
+		&model.AccountFlow{},
 		&model.IncomeExpenseItem{},
+		// 库存台账
+		&model.Stock{},
 		// 价格体系
 		&model.PriceLevel{},
 		&model.ProductPrice{},
@@ -205,5 +213,18 @@ func autoMigrate(db *gorm.DB) error {
 		// 审批模块
 		&model.ApprovalProcess{},
 		&model.ApprovalRecord{},
-	)
+	); err != nil {
+		return err
+	}
+
+	// stocks 表补充包含 company_id 的唯一联合索引。
+	// gorm tag 生成的 uniq_stock_wh_product 仅含 (warehouse_id, product_id)，
+	// 需先删除再按正确列重建（IF NOT EXISTS 会因同名索引已存在而跳过）。
+	if err := db.Exec(`DROP INDEX IF EXISTS uniq_stock_wh_product`).Error; err != nil {
+		return err
+	}
+	if err := db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS uniq_stock_wh_product ON stocks (company_id, warehouse_id, product_id)`).Error; err != nil {
+		return err
+	}
+	return nil
 }

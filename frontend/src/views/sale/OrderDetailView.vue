@@ -17,6 +17,10 @@
       </el-form>
     </el-card>
     <el-card class="detail-card">
+      <div class="history-bar">
+        <el-button size="small" type="warning" plain :disabled="!form.customerId" @click="showHistoryPrice">查看历史售价</el-button>
+        <span v-if="!form.customerId" class="tip">选择客户后可查看该客户各商品的历史售价</span>
+      </div>
       <BillItemTable :items="items" :editable="isEditable" @add="addItem" @remove="removeItem" />
     </el-card>
     <el-card class="detail-card" v-if="!isEditable && form.status">
@@ -33,15 +37,33 @@
       </template>
       <el-button @click="goBack">返回</el-button>
     </div>
+    <el-dialog v-model="historyVisible" title="历史售价" width="680px">
+      <el-table :data="historyList" v-loading="historyLoading" border size="small">
+        <el-table-column label="商品" min-width="160">
+          <template #default="{ row }">{{ row.productName || row.productId }}</template>
+        </el-table-column>
+        <el-table-column label="历史价" width="140">
+          <template #default="{ row }">{{ row.price != null ? `¥${Number(row.price).toFixed(2)}` : '无历史记录' }}</template>
+        </el-table-column>
+        <el-table-column label="单号" min-width="150">
+          <template #default="{ row }">{{ row.orderNo || '-' }}</template>
+        </el-table-column>
+        <el-table-column label="日期" width="120">
+          <template #default="{ row }">{{ row.date || '-' }}</template>
+        </el-table-column>
+      </el-table>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { useBillDetail } from '@/composables/useBillDetail'
 import RemoteSelect from '@/components/RemoteSelect.vue'
 import BillItemTable from '@/components/BillItemTable.vue'
+import api from '@/api/client'
 
 const route = useRoute()
 const id = route.params.id as string
@@ -67,11 +89,45 @@ if (id === 'new') {
   loadDetail(id)
   if (routeMode === 'edit') setMode('edit')
 }
+
+// 历史售价（开单必看历销）
+const historyVisible = ref(false)
+const historyLoading = ref(false)
+const historyList = ref<Record<string, any>[]>([])
+
+async function showHistoryPrice() {
+  const rows = items.value.filter(it => it.productId)
+  if (!rows.length) {
+    ElMessage.warning('请先添加商品明细')
+    return
+  }
+  historyVisible.value = true
+  historyLoading.value = true
+  historyList.value = rows.map(it => ({ productId: it.productId, productName: it.productName }))
+  try {
+    await Promise.all(rows.map(async (it, idx) => {
+      try {
+        const res = await api.get('/api/v1/sales-orders/history-price', {
+          params: { customerId: form.value.customerId, productId: it.productId },
+        })
+        if ((res.data.code === 0 || res.data.code === 200) && res.data.data) {
+          historyList.value[idx] = { ...historyList.value[idx], ...res.data.data }
+        }
+      } catch {
+        // 单个商品查不到历史价时保持“无历史记录”
+      }
+    }))
+  } finally {
+    historyLoading.value = false
+  }
+}
 </script>
 
 <style scoped>
 .page { padding: 20px; }
 .detail-card { margin-top: 16px; }
+.history-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.history-bar .tip { font-size: 12px; color: #909399; }
 .footer-actions { margin-top: 16px; text-align: center; }
 .status-actions { text-align: center; }
 </style>

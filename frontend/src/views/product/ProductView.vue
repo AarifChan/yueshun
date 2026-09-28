@@ -24,6 +24,7 @@
         <el-table-column prop="brandName" label="品牌" width="120" />
         <el-table-column prop="unit" label="单位" width="80" />
         <el-table-column prop="retailPrice" label="零售价" width="100" />
+        <el-table-column prop="totalStock" label="库存" width="100"><template #default="{ row }">{{ row.totalStock ?? '-' }}</template></el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }"><el-tag :type="row.status === 1 ? 'success' : 'danger'">{{ row.status === 1 ? '启用' : '禁用' }}</el-tag></template>
         </el-table-column>

@@ -28,6 +28,12 @@ dev: ## 开发模式运行（热重载需安装 air）
 run: ## 直接运行（不调 air）
 	go run $(MAIN_FILE)
 
+start: ## 同时启动前后端
+	@./scripts/start.sh
+
+start-build: ## 编译后端后同时启动前后端
+	@./scripts/start.sh --build
+
 swagger: ## 生成 Swagger 文档
 	@echo "Generating swagger docs..."
 	@which swag >/dev/null 2>&1 || (echo "Installing swag..." && go install github.com/swaggo/swag/cmd/swag@latest)

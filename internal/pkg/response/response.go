@@ -47,6 +47,10 @@ func Error(code int, message string) Response {
 
 // PageResult 分页响应
 func PageResult(list interface{}, total int64, page, pageSize int) Response {
+	// nil slice 序列化为 null，前端组件（如 el-table）要求数组，统一转为空数组
+	if list == nil {
+		list = []interface{}{}
+	}
 	return Success(map[string]interface{}{
 		"list":     list,
 		"total":    total,

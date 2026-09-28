@@ -4,7 +4,10 @@
       <template #header>
         <div class="card-header">
           <span>采购订单</span>
-          <el-button type="primary" @click="goCreate">新增订单</el-button>
+          <div>
+            <el-button type="warning" @click="openReplenish">补货建议</el-button>
+            <el-button type="primary" @click="goCreate">新增订单</el-button>
+          </div>
         </div>
       </template>
       <el-form :model="searchForm" inline class="search-form">
@@ -58,6 +61,24 @@
       </el-table>
       <el-pagination v-model:current-page="pagination.page" v-model:page-size="pagination.pageSize" :total="total" :page-sizes="[10,20,50]" layout="total, sizes, prev, pager, next" @size-change="handleSizeChange" @current-change="handleCurrentChange" class="pagination" />
     </el-card>
+    <el-dialog v-model="replenishVisible" title="补货建议" width="820px">
+      <el-table :data="replenishList" v-loading="replenishLoading" border stripe @selection-change="onReplenishSelection">
+        <el-table-column type="selection" width="50" />
+        <el-table-column prop="productCode" label="商品编码" width="120" />
+        <el-table-column prop="productName" label="商品" min-width="160" />
+        <el-table-column prop="unit" label="单位" width="80" />
+        <el-table-column prop="currentStock" label="现存量" width="100" />
+        <el-table-column prop="minStock" label="最低库存" width="100" />
+        <el-table-column prop="suggestQty" label="建议采购量" width="120" />
+      </el-table>
+      <el-empty v-if="!replenishLoading && !replenishList.length" description="暂无补货建议" />
+      <template #footer>
+        <el-button @click="replenishVisible = false">取消</el-button>
+        <el-button type="primary" :disabled="!replenishSelection.length" :loading="generating" @click="generateOrder">
+          生成采购订单{{ replenishSelection.length ? `（已选 ${replenishSelection.length} 项）` : '' }}
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -99,6 +120,52 @@ function statusLabel(status: string) {
 function goCreate() { router.push('/purchase-orders/new') }
 function goDetail(id: number) { router.push(`/purchase-orders/${id}`) }
 function goEdit(id: number) { router.push(`/purchase-orders/${id}?mode=edit`) }
+
+// 补货建议
+const replenishVisible = ref(false)
+const replenishLoading = ref(false)
+const replenishList = ref<any[]>([])
+const replenishSelection = ref<any[]>([])
+const generating = ref(false)
+
+function onReplenishSelection(rows: any[]) {
+  replenishSelection.value = rows
+}
+
+async function openReplenish() {
+  replenishVisible.value = true
+  replenishLoading.value = true
+  replenishSelection.value = []
+  try {
+    const res = await api.get('/api/v1/purchase-orders/replenish-suggestions', { params: { pageSize: 999 } })
+    if (res.data.code === 0 || res.data.code === 200) {
+      replenishList.value = res.data.data?.list || []
+    }
+  } catch {
+    // 拦截器已提示错误
+  } finally {
+    replenishLoading.value = false
+  }
+}
+
+async function generateOrder() {
+  generating.value = true
+  try {
+    const payload = {
+      items: replenishSelection.value.map(r => ({ productId: r.productId, quantity: r.suggestQty, price: 0 })),
+    }
+    const res = await api.post('/api/v1/purchase-orders', payload)
+    if (res.data.code === 0 || res.data.code === 200) {
+      ElMessage.success('采购订单已生成（草稿）')
+      replenishVisible.value = false
+      fetchList()
+    }
+  } catch {
+    // 拦截器已提示错误
+  } finally {
+    generating.value = false
+  }
+}
 
 async function handleConfirm(row: any) {
   try {

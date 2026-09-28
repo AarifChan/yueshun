@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"strconv"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	"gorm.io/gorm"
 	"zhizhang-server/internal/api/middleware"
 	"zhizhang-server/internal/model"
+	"zhizhang-server/internal/pkg/database"
 	"zhizhang-server/internal/pkg/response"
 )
 
@@ -46,6 +48,7 @@ func (h *InventoryHandler) RegisterRoutes(r *gin.RouterGroup) {
 	{
 		iw.GET("", h.ListWarnings)
 		iw.POST("", h.CreateWarning)
+		iw.POST("/refresh", h.RefreshWarnings)
 		iw.GET("/:id", h.GetWarning)
 		iw.PUT("/:id", h.UpdateWarning)
 		iw.DELETE("/:id", h.DeleteWarning)
@@ -325,13 +328,17 @@ func (h *InventoryHandler) CompleteCheck(c *gin.Context) {
 		}
 		for _, item := range check.Items {
 			if item.DiffQty != 0 {
-				if err := tx.Model(&model.Product{}).Where("id = ?", item.ProductID).UpdateColumn("stock", gorm.Expr("stock + ?", item.DiffQty)).Error; err != nil {
+				if err := database.ChangeStock(tx, companyID, check.WarehouseID, item.ProductID, item.DiffQty); err != nil {
 					return err
 				}
 			}
 		}
 		return nil
 	}); err != nil {
+		if errors.Is(err, database.ErrStockNotEnough) {
+			response.Fail(c, response.CodeBadRequest, err.Error())
+			return
+		}
 		log.Error().Err(err).Msg("complete inventory check failed")
 		response.ServerError(c, "完成盘点失败")
 		return
@@ -616,15 +623,19 @@ func (h *InventoryHandler) CompleteTransfer(c *gin.Context) {
 			return err
 		}
 		for _, item := range transfer.Items {
-			if err := tx.Model(&model.Product{}).Where("id = ?", item.ProductID).UpdateColumn("stock", gorm.Expr("stock - ?", item.Quantity)).Error; err != nil {
+			if err := database.ChangeStock(tx, companyID, transfer.FromWarehouseID, item.ProductID, -item.Quantity); err != nil {
 				return err
 			}
-			if err := tx.Model(&model.Product{}).Where("id = ?", item.ProductID).UpdateColumn("stock", gorm.Expr("stock + ?", item.Quantity)).Error; err != nil {
+			if err := database.ChangeStock(tx, companyID, transfer.ToWarehouseID, item.ProductID, item.Quantity); err != nil {
 				return err
 			}
 		}
 		return nil
 	}); err != nil {
+		if errors.Is(err, database.ErrStockNotEnough) {
+			response.Fail(c, response.CodeBadRequest, err.Error())
+			return
+		}
 		log.Error().Err(err).Msg("complete inventory transfer failed")
 		response.ServerError(c, "完成调拨失败")
 		return
@@ -671,7 +682,52 @@ func (h *InventoryHandler) ListWarnings(c *gin.Context) {
 	var list []model.InventoryWarning
 	query.Order("created_at DESC").Offset((req.Page - 1) * req.PageSize).Limit(req.PageSize).Find(&list)
 
-	response.OkWithPage(c, list, req.Page, req.PageSize, int(total))
+	// 补充商品/仓库名称
+	productIDs := make([]uint, 0, len(list))
+	warehouseIDs := make([]uint, 0, len(list))
+	for _, w := range list {
+		productIDs = append(productIDs, w.ProductID)
+		if w.WarehouseID > 0 {
+			warehouseIDs = append(warehouseIDs, w.WarehouseID)
+		}
+	}
+	var products []model.Product
+	if len(productIDs) > 0 {
+		h.db.Select("id", "name", "code").Where("id IN ?", productIDs).Find(&products)
+	}
+	var warehouses []model.Warehouse
+	if len(warehouseIDs) > 0 {
+		h.db.Select("id", "name").Where("id IN ?", warehouseIDs).Find(&warehouses)
+	}
+	productMap := make(map[uint]model.Product, len(products))
+	for _, p := range products {
+		productMap[p.ID] = p
+	}
+	warehouseMap := make(map[uint]string, len(warehouses))
+	for _, wh := range warehouses {
+		warehouseMap[wh.ID] = wh.Name
+	}
+
+	type warningItem struct {
+		model.InventoryWarning
+		ProductName  string `json:"productName"`
+		ProductCode  string `json:"productCode"`
+		WarehouseName string `json:"warehouseName"`
+	}
+	items := make([]warningItem, 0, len(list))
+	for _, w := range list {
+		item := warningItem{InventoryWarning: w}
+		if p, ok := productMap[w.ProductID]; ok {
+			item.ProductName = p.Name
+			item.ProductCode = p.Code
+		}
+		if name, ok := warehouseMap[w.WarehouseID]; ok {
+			item.WarehouseName = name
+		}
+		items = append(items, item)
+	}
+
+	response.OkWithPage(c, items, req.Page, req.PageSize, int(total))
 }
 
 func (h *InventoryHandler) GetWarning(c *gin.Context) {
@@ -688,6 +744,117 @@ func (h *InventoryHandler) GetWarning(c *gin.Context) {
 		return
 	}
 	response.Ok(c, warning)
+}
+
+// RefreshWarnings 库存预警刷新：按当前总库存自动生成/更新/解决预警
+func (h *InventoryHandler) RefreshWarnings(c *gin.Context) {
+	companyID := middleware.GetCompanyID(c)
+	if companyID == 0 {
+		response.Unauthorized(c, "未登录")
+		return
+	}
+
+	// 汇总各商品总库存
+	type stockAgg struct {
+		ProductID uint
+		Total     float64
+	}
+	var aggs []stockAgg
+	if err := h.db.Table("stocks").
+		Select("product_id, SUM(quantity) AS total").
+		Where("company_id = ?", companyID).
+		Group("product_id").
+		Scan(&aggs).Error; err != nil {
+		log.Error().Err(err).Msg("aggregate stock failed")
+		response.ServerError(c, "刷新失败")
+		return
+	}
+	stockMap := make(map[uint]float64, len(aggs))
+	for _, a := range aggs {
+		stockMap[a.ProductID] = a.Total
+	}
+
+	// 所有启用商品
+	var products []model.Product
+	if err := h.db.Where("company_id = ? AND status = 1", companyID).Find(&products).Error; err != nil {
+		log.Error().Err(err).Msg("query products failed")
+		response.ServerError(c, "刷新失败")
+		return
+	}
+
+	created, updated := 0, 0
+	warned := make(map[uint]bool)
+	for _, p := range products {
+		total := stockMap[p.ID]
+		warningType := ""
+		if total < p.MinStock {
+			warningType = "low"
+		} else if p.MaxStock > 0 && total > p.MaxStock {
+			warningType = "high"
+		}
+		if warningType == "" {
+			continue
+		}
+		warned[p.ID] = true
+
+		var warning model.InventoryWarning
+		err := h.db.Where("company_id = ? AND product_id = ? AND status <> 'resolved'", companyID, p.ID).
+			Order("created_at DESC").First(&warning).Error
+		if err == nil {
+			// 已有未解决预警，更新
+			warning.CurrentStock = total
+			warning.WarningType = warningType
+			warning.Status = "active"
+			if err := h.db.Save(&warning).Error; err != nil {
+				log.Error().Err(err).Uint("warningID", warning.ID).Msg("update warning failed")
+				response.ServerError(c, "刷新失败")
+				return
+			}
+			updated++
+		} else if err == gorm.ErrRecordNotFound {
+			warning = model.InventoryWarning{
+				BaseModelWithCompany: model.BaseModelWithCompany{CompanyID: companyID},
+				WarehouseID:          0,
+				ProductID:            p.ID,
+				MinStock:             p.MinStock,
+				MaxStock:             p.MaxStock,
+				CurrentStock:         total,
+				WarningType:          warningType,
+				Status:               "active",
+			}
+			if err := h.db.Create(&warning).Error; err != nil {
+				log.Error().Err(err).Uint("productID", p.ID).Msg("create warning failed")
+				response.ServerError(c, "刷新失败")
+				return
+			}
+			created++
+		} else {
+			log.Error().Err(err).Msg("query warning failed")
+			response.ServerError(c, "刷新失败")
+			return
+		}
+	}
+
+	// 已不再满足预警条件且仍为 active 的记录标记为 resolved
+	resolved := 0
+	var actives []model.InventoryWarning
+	if err := h.db.Where("company_id = ? AND status = 'active'", companyID).Find(&actives).Error; err != nil {
+		log.Error().Err(err).Msg("query active warnings failed")
+		response.ServerError(c, "刷新失败")
+		return
+	}
+	for _, w := range actives {
+		if !warned[w.ProductID] {
+			if err := h.db.Model(&model.InventoryWarning{}).Where("id = ?", w.ID).UpdateColumn("status", "resolved").Error; err != nil {
+				log.Error().Err(err).Uint("warningID", w.ID).Msg("resolve warning failed")
+				response.ServerError(c, "刷新失败")
+				return
+			}
+			resolved++
+		}
+	}
+
+	response.Ok(c, gin.H{"created": created, "updated": updated, "resolved": resolved})
 }
 
 type CreateWarningReq struct {
@@ -716,7 +883,7 @@ func (h *InventoryHandler) CreateWarning(c *gin.Context) {
 		ProductID:            req.ProductID,
 		MinStock:             req.MinStock,
 		MaxStock:             req.MaxStock,
-		Status:               "normal",
+		Status:               "active",
 		Remark:               req.Remark,
 	}
 
