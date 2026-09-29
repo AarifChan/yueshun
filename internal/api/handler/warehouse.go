@@ -51,6 +51,10 @@ func (h *WarehouseHandler) RegisterRoutes(r *gin.RouterGroup) {
 	stocks := r.Group("/stocks")
 	{
 		stocks.GET("", h.ListStocks)
+		stocks.GET("/status", h.ListStockStatus)
+		stocks.PUT("/status/limits", h.UpdateStockLimits)
+		stocks.GET("/status/:productId/warehouses", h.ListStockDistribution)
+		stocks.GET("/status/:productId/flows", h.ListStockFlows)
 	}
 
 	// 收支项目

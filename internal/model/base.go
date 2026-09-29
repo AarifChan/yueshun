@@ -775,6 +775,68 @@ type InventoryWarning struct {
 	Remark       string  `json:"remark" gorm:"size:255"`
 }
 
+// OtherInStock 其他入库单
+type OtherInStock struct {
+	BaseModelWithCompany
+	WarehouseID uint              `json:"warehouseId" gorm:"index;not null"`
+	BillNo      string            `json:"billNo" gorm:"size:64;index;not null"`
+	BillDate    time.Time         `json:"billDate" gorm:"type:date"`
+	InType      string            `json:"inType" gorm:"size:32;default:报溢入库"` // 报溢入库/盘盈入库/期初入库/其他入库
+	Counterpart string            `json:"counterpart" gorm:"size:128"`            // 往来单位
+	SettleUnit  string            `json:"settleUnit" gorm:"size:128"`             // 结算单位
+	HandlerID   uint              `json:"handlerId" gorm:"index"`                 // 经手人
+	DeptID      uint              `json:"deptId" gorm:"index"`                    // 部门
+	TotalQty    float64           `json:"totalQty" gorm:"type:decimal(18,4);default:0"`
+	Amount      float64           `json:"amount" gorm:"type:decimal(18,4);default:0"`
+	Status      string            `json:"status" gorm:"size:20;default:draft;comment:draft草稿 completed已过账"`
+	OperatorID  uint              `json:"operatorId" gorm:"index"` // 制单人
+	Remark      string            `json:"remark" gorm:"size:500"`
+	Items       []OtherInStockItem `json:"items" gorm:"foreignKey:InStockID"`
+}
+
+// OtherInStockItem 其他入库单明细
+type OtherInStockItem struct {
+	BaseModel
+	InStockID uint    `json:"inStockId" gorm:"index;not null"`
+	ProductID uint    `json:"productId" gorm:"index;not null"`
+	Quantity  float64 `json:"quantity" gorm:"type:decimal(18,4);default:0"`
+	Price     float64 `json:"price" gorm:"type:decimal(18,4);default:0"`
+	Amount    float64 `json:"amount" gorm:"type:decimal(18,4);default:0"`
+	Remark    string  `json:"remark" gorm:"size:255"`
+	Product   Product `json:"product" gorm:"foreignKey:ProductID"`
+}
+
+// OtherOutStock 其他出库单
+type OtherOutStock struct {
+	BaseModelWithCompany
+	WarehouseID uint               `json:"warehouseId" gorm:"index;not null"`
+	BillNo      string             `json:"billNo" gorm:"size:64;index;not null"`
+	BillDate    time.Time          `json:"billDate" gorm:"type:date"`
+	OutType     string             `json:"outType" gorm:"size:32;default:报损出库"` // 报损出库/盘亏出库/其他出库
+	Counterpart string             `json:"counterpart" gorm:"size:128"`             // 往来单位
+	SettleUnit  string             `json:"settleUnit" gorm:"size:128"`              // 结算单位
+	HandlerID   uint               `json:"handlerId" gorm:"index"`                  // 经手人
+	DeptID      uint               `json:"deptId" gorm:"index"`                     // 部门
+	TotalQty    float64            `json:"totalQty" gorm:"type:decimal(18,4);default:0"`
+	Amount      float64            `json:"amount" gorm:"type:decimal(18,4);default:0"`
+	Status      string             `json:"status" gorm:"size:20;default:draft;comment:draft草稿 completed已过账"`
+	OperatorID  uint               `json:"operatorId" gorm:"index"` // 制单人
+	Remark      string             `json:"remark" gorm:"size:500"`
+	Items       []OtherOutStockItem `json:"items" gorm:"foreignKey:OutStockID"`
+}
+
+// OtherOutStockItem 其他出库单明细
+type OtherOutStockItem struct {
+	BaseModel
+	OutStockID uint    `json:"outStockId" gorm:"index;not null"`
+	ProductID  uint    `json:"productId" gorm:"index;not null"`
+	Quantity   float64 `json:"quantity" gorm:"type:decimal(18,4);default:0"`
+	Price      float64 `json:"price" gorm:"type:decimal(18,4);default:0"`
+	Amount     float64 `json:"amount" gorm:"type:decimal(18,4);default:0"`
+	Remark     string  `json:"remark" gorm:"size:255"`
+	Product    Product `json:"product" gorm:"foreignKey:ProductID"`
+}
+
 // ==================== 商城模块 ====================
 
 // MallProduct 商城商品展示

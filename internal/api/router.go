@@ -37,6 +37,8 @@ func SetupRouter(db *gorm.DB, jwtCfg *middleware.JWTConfig, wecomCfg *handler.We
 	purchaseHandler := handler.NewPurchaseHandler(db)
 	saleHandler := handler.NewSaleHandler(db)
 	inventoryHandler := handler.NewInventoryHandler(db)
+	otherInStockHandler := handler.NewOtherInStockHandler(db)
+	otherOutStockHandler := handler.NewOtherOutStockHandler(db)
 	mallHandler := handler.NewMallHandler(db)
 	crmHandler := handler.NewCRMHandler(db)
 	approvalHandler := handler.NewApprovalHandler(db)
@@ -98,6 +100,8 @@ func SetupRouter(db *gorm.DB, jwtCfg *middleware.JWTConfig, wecomCfg *handler.We
 
 			// 库存模块
 			inventoryHandler.RegisterRoutes(authorized)
+			otherInStockHandler.RegisterRoutes(authorized)
+			otherOutStockHandler.RegisterRoutes(authorized)
 
 			// 商城模块
 			mallHandler.RegisterRoutes(authorized)

@@ -179,7 +179,7 @@ func (h *AuthHandler) WeComCallback(c *gin.Context) {
 if (window.parent !== window) {
   window.parent.postMessage(%s, window.location.origin);
 } else {
-  document.body.innerHTML = '<p style="font-size:18px;">%%s</p><p><a href="/">返回系统登录页</a></p>';
+  document.body.innerHTML = '<p style="font-size:18px;">%s</p><p><a href="/">返回系统登录页</a></p>';
 }
 </script>
 </body></html>`, payload, message)))

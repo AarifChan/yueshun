@@ -24,12 +24,116 @@ definitions:
       user:
         $ref: '#/definitions/handler.UserInfo'
     type: object
+  handler.OtherInStockItemReq:
+    properties:
+      price:
+        type: number
+      productId:
+        type: integer
+      quantity:
+        type: number
+      remark:
+        type: string
+    required:
+    - productId
+    - quantity
+    type: object
+  handler.OtherInStockSaveReq:
+    properties:
+      billDate:
+        type: string
+      complete:
+        description: true=保存并过账
+        type: boolean
+      counterpart:
+        type: string
+      deptId:
+        type: integer
+      handlerId:
+        type: integer
+      inType:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/handler.OtherInStockItemReq'
+        minItems: 1
+        type: array
+      remark:
+        type: string
+      settleUnit:
+        type: string
+      warehouseId:
+        type: integer
+    required:
+    - billDate
+    - inType
+    - items
+    - warehouseId
+    type: object
+  handler.OtherOutStockItemReq:
+    properties:
+      price:
+        type: number
+      productId:
+        type: integer
+      quantity:
+        type: number
+      remark:
+        type: string
+    required:
+    - productId
+    - quantity
+    type: object
+  handler.OtherOutStockSaveReq:
+    properties:
+      billDate:
+        type: string
+      complete:
+        type: boolean
+      counterpart:
+        type: string
+      deptId:
+        type: integer
+      handlerId:
+        type: integer
+      items:
+        items:
+          $ref: '#/definitions/handler.OtherOutStockItemReq'
+        minItems: 1
+        type: array
+      outType:
+        type: string
+      remark:
+        type: string
+      settleUnit:
+        type: string
+      warehouseId:
+        type: integer
+    required:
+    - billDate
+    - items
+    - outType
+    - warehouseId
+    type: object
   handler.RefreshReq:
     properties:
       refreshToken:
         type: string
     required:
     - refreshToken
+    type: object
+  handler.StockLimitReq:
+    properties:
+      maxStock:
+        type: number
+      minStock:
+        type: number
+      productIds:
+        items:
+          type: integer
+        type: array
+    required:
+    - productIds
     type: object
   handler.UserInfo:
     properties:
@@ -154,4 +258,413 @@ paths:
       summary: 刷新访问令牌
       tags:
       - 认证
+  /api/v1/auth/wecom/callback:
+    get:
+      parameters:
+      - description: 授权码
+        in: query
+        name: code
+        required: true
+        type: string
+      - description: 状态码
+        in: query
+        name: state
+        required: true
+        type: string
+      produces:
+      - text/html
+      responses: {}
+      summary: 企业微信授权回调
+      tags:
+      - 认证
+  /api/v1/auth/wecom/qrcode-url:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: url 为扫码页面地址
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 企业微信扫码登录地址
+      tags:
+      - 认证
+  /api/v1/auth/wecom/status:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: enabled 表示是否已配置
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 企业微信登录状态
+      tags:
+      - 认证
+  /other-in-stocks:
+    get:
+      parameters:
+      - description: 页码
+        in: query
+        name: page
+        type: integer
+      - description: 每页数量
+        in: query
+        name: pageSize
+        type: integer
+      - description: 单号
+        in: query
+        name: keyword
+        type: string
+      - description: 商品名称/编号
+        in: query
+        name: productKw
+        type: string
+      - description: 入库仓库
+        in: query
+        name: warehouseId
+        type: integer
+      - description: 状态 draft/completed
+        in: query
+        name: status
+        type: string
+      - description: 入库类型
+        in: query
+        name: inType
+        type: string
+      - description: 录单时间起 YYYY-MM-DD
+        in: query
+        name: startDate
+        type: string
+      - description: 录单时间止 YYYY-MM-DD
+        in: query
+        name: endDate
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 其他入库单列表
+      tags:
+      - 库存
+    post:
+      parameters:
+      - description: 单据内容
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.OtherInStockSaveReq'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 新增其他入库单（草稿或保存并过账）
+      tags:
+      - 库存
+  /other-in-stocks/{id}:
+    delete:
+      parameters:
+      - description: 单据ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 删除其他入库单
+      tags:
+      - 库存
+    get:
+      parameters:
+      - description: 单据ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 其他入库单详情
+      tags:
+      - 库存
+    put:
+      parameters:
+      - description: 单据ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 单据内容
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.OtherInStockSaveReq'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 编辑其他入库单
+      tags:
+      - 库存
+  /other-in-stocks/{id}/complete:
+    put:
+      parameters:
+      - description: 单据ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 其他入库单过账
+      tags:
+      - 库存
+  /other-out-stocks:
+    get:
+      parameters:
+      - description: 页码
+        in: query
+        name: page
+        type: integer
+      - description: 每页数量
+        in: query
+        name: pageSize
+        type: integer
+      - description: 单号
+        in: query
+        name: keyword
+        type: string
+      - description: 商品名称/编号
+        in: query
+        name: productKw
+        type: string
+      - description: 出库仓库
+        in: query
+        name: warehouseId
+        type: integer
+      - description: 状态 draft/completed
+        in: query
+        name: status
+        type: string
+      - description: 出库类型
+        in: query
+        name: outType
+        type: string
+      - description: 录单时间起 YYYY-MM-DD
+        in: query
+        name: startDate
+        type: string
+      - description: 录单时间止 YYYY-MM-DD
+        in: query
+        name: endDate
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 其他出库单列表
+      tags:
+      - 库存
+    post:
+      parameters:
+      - description: 单据内容
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.OtherOutStockSaveReq'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 新增其他出库单（草稿或保存并过账）
+      tags:
+      - 库存
+  /other-out-stocks/{id}:
+    delete:
+      parameters:
+      - description: 单据ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 删除其他出库单
+      tags:
+      - 库存
+    get:
+      parameters:
+      - description: 单据ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 其他出库单详情
+      tags:
+      - 库存
+    put:
+      parameters:
+      - description: 单据ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 单据内容
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.OtherOutStockSaveReq'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 编辑其他出库单
+      tags:
+      - 库存
+  /other-out-stocks/{id}/complete:
+    put:
+      parameters:
+      - description: 单据ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 其他出库单过账
+      tags:
+      - 库存
+  /stocks/status:
+    get:
+      parameters:
+      - description: 页码
+        in: query
+        name: page
+        type: integer
+      - description: 每页数量
+        in: query
+        name: pageSize
+        type: integer
+      - description: 商品名称/编号
+        in: query
+        name: keyword
+        type: string
+      - description: 仓库ID
+        in: query
+        name: warehouseId
+        type: integer
+      - description: 商品分类ID（含子分类）
+        in: query
+        name: categoryId
+        type: integer
+      - description: 库存状态 in/out/belowMin/aboveMax
+        in: query
+        name: stockStatus
+        type: string
+      - description: 商品状态 1启用 0停用
+        in: query
+        name: productStatus
+        type: string
+      - description: 仅显示有账面库存商品
+        in: query
+        name: onlyWithStock
+        type: boolean
+      - description: product 按商品 / category 按分类
+        in: query
+        name: groupBy
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 库存状况表（按商品/按分类）
+      tags:
+      - 库存
+  /stocks/status/{productId}/flows:
+    get:
+      parameters:
+      - description: 商品ID
+        in: path
+        name: productId
+        required: true
+        type: integer
+      - description: 页码
+        in: query
+        name: page
+        type: integer
+      - description: 每页数量
+        in: query
+        name: pageSize
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 商品出入库明细
+      tags:
+      - 库存
+  /stocks/status/{productId}/warehouses:
+    get:
+      parameters:
+      - description: 商品ID
+        in: path
+        name: productId
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 商品库存分布
+      tags:
+      - 库存
+  /stocks/status/limits:
+    put:
+      parameters:
+      - description: 商品ID列表与上下限
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.StockLimitReq'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 批量设置商品库存上下限
+      tags:
+      - 库存
 swagger: "2.0"

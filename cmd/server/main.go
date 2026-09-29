@@ -79,6 +79,11 @@ func main() {
 		log.Fatal().Err(err).Msg("seed data init failed")
 	}
 
+	// 库存状况表演示数据（商品表为空时从内置 CSV 导入）
+	if err := handler.SeedInventoryStatusData(db); err != nil {
+		log.Warn().Err(err).Msg("inventory seed data init failed")
+	}
+
 	// 初始化 Redis（可选，非阻塞）
 	if _, err := redis.Init(&cfg.Redis); err != nil {
 		log.Warn().Err(err).Msg("redis init failed, continuing without cache")
@@ -214,6 +219,10 @@ func autoMigrate(db *gorm.DB) error {
 		&model.InventoryTransfer{},
 		&model.InventoryTransferItem{},
 		&model.InventoryWarning{},
+		&model.OtherInStock{},
+		&model.OtherInStockItem{},
+		&model.OtherOutStock{},
+		&model.OtherOutStockItem{},
 		// 商城模块
 		&model.MallProduct{},
 		&model.MallCart{},

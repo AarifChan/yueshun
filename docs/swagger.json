@@ -169,6 +169,637 @@
                     }
                 }
             }
+        },
+        "/api/v1/auth/wecom/callback": {
+            "get": {
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "认证"
+                ],
+                "summary": "企业微信授权回调",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "授权码",
+                        "name": "code",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "状态码",
+                        "name": "state",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/api/v1/auth/wecom/qrcode-url": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "认证"
+                ],
+                "summary": "企业微信扫码登录地址",
+                "responses": {
+                    "200": {
+                        "description": "url 为扫码页面地址",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/wecom/status": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "认证"
+                ],
+                "summary": "企业微信登录状态",
+                "responses": {
+                    "200": {
+                        "description": "enabled 表示是否已配置",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/other-in-stocks": {
+            "get": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "其他入库单列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页数量",
+                        "name": "pageSize",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "单号",
+                        "name": "keyword",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "商品名称/编号",
+                        "name": "productKw",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "入库仓库",
+                        "name": "warehouseId",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "状态 draft/completed",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "入库类型",
+                        "name": "inType",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "录单时间起 YYYY-MM-DD",
+                        "name": "startDate",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "录单时间止 YYYY-MM-DD",
+                        "name": "endDate",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "新增其他入库单（草稿或保存并过账）",
+                "parameters": [
+                    {
+                        "description": "单据内容",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.OtherInStockSaveReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/other-in-stocks/{id}": {
+            "get": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "其他入库单详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "单据ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "编辑其他入库单",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "单据ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "单据内容",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.OtherInStockSaveReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "删除其他入库单",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "单据ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/other-in-stocks/{id}/complete": {
+            "put": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "其他入库单过账",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "单据ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/other-out-stocks": {
+            "get": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "其他出库单列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页数量",
+                        "name": "pageSize",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "单号",
+                        "name": "keyword",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "商品名称/编号",
+                        "name": "productKw",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "出库仓库",
+                        "name": "warehouseId",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "状态 draft/completed",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "出库类型",
+                        "name": "outType",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "录单时间起 YYYY-MM-DD",
+                        "name": "startDate",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "录单时间止 YYYY-MM-DD",
+                        "name": "endDate",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "新增其他出库单（草稿或保存并过账）",
+                "parameters": [
+                    {
+                        "description": "单据内容",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.OtherOutStockSaveReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/other-out-stocks/{id}": {
+            "get": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "其他出库单详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "单据ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "编辑其他出库单",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "单据ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "单据内容",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.OtherOutStockSaveReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "删除其他出库单",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "单据ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/other-out-stocks/{id}/complete": {
+            "put": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "其他出库单过账",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "单据ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/stocks/status": {
+            "get": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "库存状况表（按商品/按分类）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页数量",
+                        "name": "pageSize",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "商品名称/编号",
+                        "name": "keyword",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "仓库ID",
+                        "name": "warehouseId",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "商品分类ID（含子分类）",
+                        "name": "categoryId",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "库存状态 in/out/belowMin/aboveMax",
+                        "name": "stockStatus",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "商品状态 1启用 0停用",
+                        "name": "productStatus",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "仅显示有账面库存商品",
+                        "name": "onlyWithStock",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "product 按商品 / category 按分类",
+                        "name": "groupBy",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/stocks/status/limits": {
+            "put": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "批量设置商品库存上下限",
+                "parameters": [
+                    {
+                        "description": "商品ID列表与上下限",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.StockLimitReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/stocks/status/{productId}/flows": {
+            "get": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "商品出入库明细",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "商品ID",
+                        "name": "productId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页数量",
+                        "name": "pageSize",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/stocks/status/{productId}/warehouses": {
+            "get": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "商品库存分布",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "商品ID",
+                        "name": "productId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -208,6 +839,139 @@
                 }
             }
         },
+        "handler.OtherInStockItemReq": {
+            "type": "object",
+            "required": [
+                "productId",
+                "quantity"
+            ],
+            "properties": {
+                "price": {
+                    "type": "number"
+                },
+                "productId": {
+                    "type": "integer"
+                },
+                "quantity": {
+                    "type": "number"
+                },
+                "remark": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.OtherInStockSaveReq": {
+            "type": "object",
+            "required": [
+                "billDate",
+                "inType",
+                "items",
+                "warehouseId"
+            ],
+            "properties": {
+                "billDate": {
+                    "type": "string"
+                },
+                "complete": {
+                    "description": "true=保存并过账",
+                    "type": "boolean"
+                },
+                "counterpart": {
+                    "type": "string"
+                },
+                "deptId": {
+                    "type": "integer"
+                },
+                "handlerId": {
+                    "type": "integer"
+                },
+                "inType": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/handler.OtherInStockItemReq"
+                    }
+                },
+                "remark": {
+                    "type": "string"
+                },
+                "settleUnit": {
+                    "type": "string"
+                },
+                "warehouseId": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handler.OtherOutStockItemReq": {
+            "type": "object",
+            "required": [
+                "productId",
+                "quantity"
+            ],
+            "properties": {
+                "price": {
+                    "type": "number"
+                },
+                "productId": {
+                    "type": "integer"
+                },
+                "quantity": {
+                    "type": "number"
+                },
+                "remark": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.OtherOutStockSaveReq": {
+            "type": "object",
+            "required": [
+                "billDate",
+                "items",
+                "outType",
+                "warehouseId"
+            ],
+            "properties": {
+                "billDate": {
+                    "type": "string"
+                },
+                "complete": {
+                    "type": "boolean"
+                },
+                "counterpart": {
+                    "type": "string"
+                },
+                "deptId": {
+                    "type": "integer"
+                },
+                "handlerId": {
+                    "type": "integer"
+                },
+                "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/handler.OtherOutStockItemReq"
+                    }
+                },
+                "outType": {
+                    "type": "string"
+                },
+                "remark": {
+                    "type": "string"
+                },
+                "settleUnit": {
+                    "type": "string"
+                },
+                "warehouseId": {
+                    "type": "integer"
+                }
+            }
+        },
         "handler.RefreshReq": {
             "type": "object",
             "required": [
@@ -216,6 +980,26 @@
             "properties": {
                 "refreshToken": {
                     "type": "string"
+                }
+            }
+        },
+        "handler.StockLimitReq": {
+            "type": "object",
+            "required": [
+                "productIds"
+            ],
+            "properties": {
+                "maxStock": {
+                    "type": "number"
+                },
+                "minStock": {
+                    "type": "number"
+                },
+                "productIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
                 }
             }
         },
