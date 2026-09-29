@@ -225,7 +225,7 @@ func (h *ProductSettingHandler) ListSpecs(c *gin.Context) {
 func (h *ProductSettingHandler) CreateSpec(c *gin.Context) {
 	var req struct {
 		Name   string `json:"name" binding:"required,max=10"`
-		Values string `json:"values" binding:"omitempty,max=255"`
+		Values string `json:"values"`
 		Remark string `json:"remark" binding:"omitempty,max=255"`
 		Sort   int    `json:"sort"`
 		Status int8   `json:"status"`
@@ -263,7 +263,7 @@ func (h *ProductSettingHandler) UpdateSpec(c *gin.Context) {
 	}
 	var req struct {
 		Name   string `json:"name" binding:"required,max=10"`
-		Values string `json:"values" binding:"omitempty,max=255"`
+		Values string `json:"values"`
 		Remark string `json:"remark" binding:"omitempty,max=255"`
 		Sort   int    `json:"sort"`
 		Status int8   `json:"status"`

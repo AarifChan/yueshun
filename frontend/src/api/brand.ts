@@ -45,6 +45,38 @@ export function sortBrands(items: { id: number; sort: number }[]) {
   return api.post('/api/v1/products/brands/sort', { items })
 }
 
+export interface BrandCategoryNode {
+  id: number
+  parentId: number
+  name: string
+  sort: number
+  status: number
+  children: BrandCategoryNode[] | null
+}
+
+export interface BrandCategoryPayload {
+  parentId: number
+  name: string
+  sort: number
+  status: number
+}
+
+export function fetchBrandCategoryTree() {
+  return api.get('/api/v1/products/brand-categories/tree')
+}
+
+export function createBrandCategory(data: BrandCategoryPayload) {
+  return api.post('/api/v1/products/brand-categories', data)
+}
+
+export function updateBrandCategory(id: number, data: BrandCategoryPayload) {
+  return api.put(`/api/v1/products/brand-categories/${id}`, data)
+}
+
+export function deleteBrandCategory(id: number) {
+  return api.delete(`/api/v1/products/brand-categories/${id}`)
+}
+
 export function uploadFile(file: File) {
   const fd = new FormData()
   fd.append('file', file)

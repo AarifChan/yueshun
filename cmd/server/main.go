@@ -160,6 +160,7 @@ func autoMigrate(db *gorm.DB) error {
 		// 商品资料
 		&model.ProductCategory{},
 		&model.Brand{},
+		&model.BrandCategory{},
 		&model.ProductSeries{},
 		&model.Product{},
 		&model.ProductUnit{},

@@ -9,6 +9,7 @@ export interface CategoryNode {
   status: number
   image: string
   productCount: number
+  hasChildren?: boolean
   children: CategoryNode[] | null
 }
 
@@ -21,8 +22,10 @@ export interface CategoryPayload {
   image: string
 }
 
-export function fetchCategoryTree() {
-  return api.get('/api/v1/products/categories/tree')
+export function fetchCategoryTree(parentId?: number) {
+  return api.get('/api/v1/products/categories/tree', {
+    params: parentId === undefined ? {} : { parentId },
+  })
 }
 
 export function createCategory(data: CategoryPayload) {

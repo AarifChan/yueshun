@@ -10,12 +10,14 @@
     <el-alert type="info" :closable="false" show-icon title="商品分类为商品的基本属性，每个商品只能对应一个商品分类" class="tip" />
     <el-card>
       <el-table
+        :key="tableKey"
         ref="tableRef"
         :data="tree"
         v-loading="loading"
         row-key="id"
-        :tree-props="{ children: 'children' }"
-        :expand-row-keys="expandRowKeys"
+        lazy
+        :load="loadChildren"
+        :tree-props="{ children: 'children', hasChildren: 'hasChildren' }"
         border
         @expand-change="onExpandChange"
       >
@@ -55,9 +57,9 @@
           <template #default="{ row }">
             <div class="category-name" :style="{ paddingLeft: (levelMap.get(row.id) || 0) * 18 + 'px' }">
               <el-icon
-                v-if="row.children && row.children.length"
+                v-if="row.hasChildren"
                 class="expand-icon"
-                :class="{ expanded: expandedKeys.has(row.id) }"
+                :class="{ expanded: isExpanded(row.id) }"
                 @click.stop="toggleRow(row)"
               ><CaretRight /></el-icon>
               <span v-else class="expand-spacer"></span>
@@ -133,7 +135,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, markRaw, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowRef } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, type FormInstance, type UploadFile, type UploadRequestOptions } from 'element-plus'
 import { CaretBottom, CaretRight, Folder, More, Picture, Plus, Rank } from '@element-plus/icons-vue'
@@ -151,23 +153,29 @@ import {
 } from '@/api/category'
 
 const router = useRouter()
-const tree = ref<CategoryNode[]>([])
+const tree = shallowRef<CategoryNode[]>([])
 const loading = ref(false)
 const tableRef = ref()
-const expandedKeys = ref<Set<number>>(new Set())
-const levelMap = ref<Map<number, number>>(new Map())
-const parentMap = ref<Map<number, number>>(new Map())
-const expandRowKeys = computed(() => [...expandedKeys.value])
+const tableKey = ref(0)
+const expandedKeys = new Set<number>()
+const expandVersion = ref(0)
+let levelMap = new Map<number, number>()
+let parentMap = new Map<number, number>()
 let sortable: Sortable | null = null
 
 function ok(res: any) {
   return res.data.code === 0 || res.data.code === 200
 }
 
+function isExpanded(id: number) {
+  expandVersion.value
+  return expandedKeys.has(id)
+}
+
 function normalize(nodes: CategoryNode[], level: number, parentId: number) {
   for (const node of nodes) {
-    levelMap.value.set(node.id, level)
-    parentMap.value.set(node.id, parentId)
+    levelMap.set(node.id, level)
+    parentMap.set(node.id, parentId)
     if (node.children && node.children.length) {
       normalize(node.children, level + 1, node.id)
     } else {
@@ -179,24 +187,54 @@ function normalize(nodes: CategoryNode[], level: number, parentId: number) {
 function expandAncestors(parentId: number) {
   let current = parentId
   while (current) {
-    expandedKeys.value.add(current)
-    current = parentMap.value.get(current) ?? 0
+    expandedKeys.add(current)
+    current = parentMap.get(current) ?? 0
   }
+}
+
+async function loadNodeChildren(row: CategoryNode): Promise<CategoryNode[]> {
+  try {
+    const res = await fetchCategoryTree(row.id)
+    if (ok(res)) {
+      const children: CategoryNode[] = res.data.data || []
+      normalize(children, (levelMap.get(row.id) ?? 0) + 1, row.id)
+      row.children = children
+      return children
+    }
+    ElMessage.error(res.data.message || '获取子分类失败')
+  } catch {
+  }
+  row.children = []
+  return []
+}
+
+async function loadChildren(row: CategoryNode, _treeNode: unknown, resolve: (data: CategoryNode[]) => void) {
+  if (row.children?.length) {
+    resolve(row.children)
+    return
+  }
+  resolve(await loadNodeChildren(row))
 }
 
 async function fetchTree() {
   loading.value = true
   try {
-    const res = await fetchCategoryTree()
+    const res = await fetchCategoryTree(0)
     if (ok(res)) {
       const data: CategoryNode[] = res.data.data || []
-      levelMap.value = new Map()
-      parentMap.value = new Map()
+      levelMap = new Map()
+      parentMap = new Map()
       normalize(data, 0, 0)
-      const ids = new Set(levelMap.value.keys())
-      expandedKeys.value = new Set([...expandedKeys.value].filter((id) => ids.has(id)))
-      tree.value = data
+      tree.value = markRaw(data)
+      sortable?.destroy()
+      sortable = null
+      tableKey.value++
       await nextTick()
+      await restoreExpanded(data)
+      for (const id of [...expandedKeys]) {
+        if (!levelMap.has(id)) expandedKeys.delete(id)
+      }
+      expandVersion.value++
       initSortable()
     } else {
       ElMessage.error(res.data.message || '获取分类失败')
@@ -206,12 +244,22 @@ async function fetchTree() {
   }
 }
 
+async function restoreExpanded(nodes: CategoryNode[]) {
+  for (const node of nodes) {
+    if (expandedKeys.has(node.id) && node.hasChildren) {
+      const children = await loadNodeChildren(node)
+      tableRef.value?.toggleRowExpansion(node, true)
+      if (children.length) await restoreExpanded(children)
+    }
+  }
+}
+
 function visibleRows(): CategoryNode[] {
   const rows: CategoryNode[] = []
   const walk = (nodes: CategoryNode[]) => {
     for (const node of nodes) {
       rows.push(node)
-      if (expandedKeys.value.has(node.id) && node.children?.length) walk(node.children)
+      if (expandedKeys.has(node.id) && node.children?.length) walk(node.children)
     }
   }
   walk(tree.value)
@@ -264,9 +312,10 @@ async function onDragEnd(evt: Sortable.SortableEvent) {
 }
 
 function onExpandChange(row: CategoryNode, expanded: boolean | CategoryNode[]) {
-  const isExpanded = Array.isArray(expanded) ? expanded.some((r) => r.id === row.id) : expanded
-  if (isExpanded) expandedKeys.value.add(row.id)
-  else expandedKeys.value.delete(row.id)
+  const isExpandedVal = Array.isArray(expanded) ? expanded.some((r) => r.id === row.id) : expanded
+  if (isExpandedVal) expandedKeys.add(row.id)
+  else expandedKeys.delete(row.id)
+  expandVersion.value++
 }
 
 function toggleRow(row: CategoryNode) {
@@ -300,7 +349,17 @@ const fileList = ref<UploadFile[]>([])
 const form = reactive({ parentId: 0, name: '', code: '', sort: 0, status: 1, image: '' })
 const formRules = { name: [{ required: true, message: '请输入分类名称', trigger: 'blur' }] }
 
-const parentOptions = computed(() => [{ id: 0, name: '顶级分类', code: '', sort: 0, status: 1, image: '', productCount: 0, children: tree.value } as CategoryNode])
+const dialogTree = shallowRef<CategoryNode[] | null>(null)
+const parentOptions = computed(() => [{ id: 0, name: '顶级分类', code: '', sort: 0, status: 1, image: '', productCount: 0, children: dialogTree.value ?? [] } as CategoryNode])
+
+async function ensureDialogTree() {
+  if (dialogTree.value) return
+  try {
+    const res = await fetchCategoryTree()
+    if (ok(res)) dialogTree.value = markRaw(res.data.data || [])
+  } catch {
+  }
+}
 
 function resetForm(parentId = 0) {
   Object.assign(form, { parentId, name: '', code: '', sort: 0, status: 1, image: '' })
@@ -314,6 +373,7 @@ function openCreate(parentId = 0) {
   pendingInsert.value = null
   isEdit.value = false
   currentId.value = null
+  ensureDialogTree()
   dialogVisible.value = true
 }
 
@@ -338,6 +398,7 @@ function openEdit(row: CategoryNode) {
   fileList.value = row.image ? [{ name: row.name, url: row.image, status: 'success', uid: Date.now() }] : []
   isEdit.value = true
   currentId.value = row.id
+  ensureDialogTree()
   dialogVisible.value = true
 }
 
@@ -412,6 +473,7 @@ async function handleSubmit() {
     if (ok(res)) {
       ElMessage.success(isEdit.value ? '编辑成功' : '新增成功')
       dialogVisible.value = false
+      dialogTree.value = null
       if (!isEdit.value) expandAncestors(form.parentId)
       const newId = res.data.data?.id
       if (!isEdit.value && pendingInsert.value && newId) {
@@ -437,6 +499,7 @@ async function handleDelete(row: CategoryNode) {
   const res = await deleteCategory(row.id)
   if (ok(res)) {
     ElMessage.success('删除成功')
+    dialogTree.value = null
     fetchTree()
   } else {
     ElMessage.error(res.data.message || '删除失败')

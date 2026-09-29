@@ -6,23 +6,13 @@
     </div>
     <div class="page-body">
       <el-card class="tree-panel" shadow="never">
-        <el-tree
+        <SideTreePanel
           ref="treeRef"
+          title="品牌分类"
           :data="sideTree"
-          node-key="id"
-          :props="{ label: 'name', children: 'children' }"
-          :current-node-key="currentNodeKey"
-          highlight-current
-          :expand-on-click-node="false"
           @node-click="onNodeClick"
-        >
-          <template #default="{ data }">
-            <span class="tree-node">
-              <el-icon class="tree-icon"><Folder /></el-icon>
-              <span>{{ data.name }}</span>
-            </span>
-          </template>
-        </el-tree>
+          @edit-click="openCategoryManage"
+        />
       </el-card>
       <el-card class="table-panel" shadow="never">
         <div class="search-bar">
@@ -137,6 +127,32 @@
         <el-button type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="categoryDialogVisible" title="品牌分类管理" width="460px" destroy-on-close>
+      <div class="category-manage-header">
+        <el-button type="primary" size="small" :icon="Plus" @click="handleAddRootCategory">新增一级分类</el-button>
+      </div>
+      <el-tree
+        v-if="categoryTree.length > 0"
+        :data="categoryTree"
+        node-key="id"
+        :props="{ label: 'name', children: 'children' }"
+        :expand-on-click-node="false"
+        default-expand-all
+      >
+        <template #default="{ data }">
+          <span class="manage-node">
+            <span class="manage-node-name">{{ data.name }}</span>
+            <span class="manage-actions">
+              <el-link type="primary" :underline="false" @click.stop="handleAddChildCategory(data)">新增子级</el-link>
+              <el-link type="primary" :underline="false" @click.stop="handleRenameCategory(data)">重命名</el-link>
+              <el-link type="danger" :underline="false" @click.stop="handleDeleteCategory(data)">删除</el-link>
+            </span>
+          </span>
+        </template>
+      </el-tree>
+      <el-empty v-else description="暂无分类" :image-size="60" />
+    </el-dialog>
   </div>
 </template>
 
@@ -144,18 +160,23 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, type FormInstance, type UploadFile, type UploadRequestOptions } from 'element-plus'
-import { Folder, More, Picture, Plus, Rank } from '@element-plus/icons-vue'
+import { More, Picture, Plus, Rank } from '@element-plus/icons-vue'
 import Sortable from 'sortablejs'
+import SideTreePanel from '@/components/SideTreePanel.vue'
 import {
   createBrand,
+  createBrandCategory,
   deleteBrand,
+  deleteBrandCategory,
+  fetchBrandCategoryTree,
   fetchBrands,
   sortBrands,
   updateBrand,
+  updateBrandCategory,
   uploadFile,
   type Brand,
+  type BrandCategoryNode,
 } from '@/api/brand'
-import { fetchCategoryTree, type CategoryNode } from '@/api/category'
 
 interface SideNode {
   id: number | string
@@ -168,7 +189,7 @@ const list = ref<Brand[]>([])
 const loading = ref(false)
 const tableRef = ref()
 const treeRef = ref()
-const categoryTree = ref<CategoryNode[]>([])
+const categoryTree = ref<BrandCategoryNode[]>([])
 const currentNodeKey = ref<number | string>('all')
 const keyword = ref('')
 const appliedKeyword = ref('')
@@ -239,7 +260,7 @@ async function fetchList() {
 }
 
 async function loadCategoryTree() {
-  const res = await fetchCategoryTree()
+  const res = await fetchBrandCategoryTree()
   if (ok(res)) {
     categoryTree.value = res.data.data || []
   }
@@ -398,6 +419,85 @@ async function handleDelete(row: Brand) {
   }
 }
 
+const categoryDialogVisible = ref(false)
+
+function openCategoryManage() {
+  categoryDialogVisible.value = true
+}
+
+async function promptCategoryName(title: string, defaultValue = '') {
+  try {
+    const { value } = await ElMessageBox.prompt('请输入分类名称', title, {
+      inputValue: defaultValue,
+      inputPattern: /\S+/,
+      inputErrorMessage: '请输入分类名称',
+    })
+    return value.trim()
+  } catch {
+    return null
+  }
+}
+
+async function submitCategoryCreate(parentId: number, name: string) {
+  const res = await createBrandCategory({ parentId, name, sort: 0, status: 1 })
+  if (ok(res)) {
+    ElMessage.success('新增成功')
+    loadCategoryTree()
+  } else {
+    ElMessage.error(res.data.message || '新增失败')
+  }
+}
+
+async function handleAddRootCategory() {
+  const name = await promptCategoryName('新增一级分类')
+  if (name === null) return
+  await submitCategoryCreate(0, name)
+}
+
+async function handleAddChildCategory(data: BrandCategoryNode) {
+  const name = await promptCategoryName(`新增子级分类（${data.name}）`)
+  if (name === null) return
+  await submitCategoryCreate(data.id, name)
+}
+
+async function handleRenameCategory(data: BrandCategoryNode) {
+  const name = await promptCategoryName('重命名分类', data.name)
+  if (name === null || name === data.name) return
+  const res = await updateBrandCategory(data.id, {
+    parentId: data.parentId,
+    name,
+    sort: data.sort,
+    status: data.status,
+  })
+  if (ok(res)) {
+    ElMessage.success('重命名成功')
+    loadCategoryTree()
+  } else {
+    ElMessage.error(res.data.message || '重命名失败')
+  }
+}
+
+async function handleDeleteCategory(data: BrandCategoryNode) {
+  try {
+    await ElMessageBox.confirm(`确认删除分类“${data.name}”？`, '提示', { type: 'warning' })
+  } catch {
+    return
+  }
+  const res = await deleteBrandCategory(data.id)
+  if (ok(res)) {
+    ElMessage.success('删除成功')
+    if (currentNodeKey.value === data.id) {
+      currentNodeKey.value = 'all'
+      treeRef.value?.setCurrentKey('all')
+      page.value = 1
+      fetchList()
+    }
+    loadCategoryTree()
+  } else {
+    ElMessage.error(res.data.message || '删除失败')
+  }
+}
+
 onMounted(() => {
   loadCategoryTree()
   fetchList()
@@ -412,8 +512,10 @@ onBeforeUnmount(destroySortable)
 .page-title { font-size: 18px; font-weight: 600; }
 .page-body { display: flex; gap: 16px; align-items: flex-start; }
 .tree-panel { width: 200px; flex-shrink: 0; }
-.tree-node { display: flex; align-items: center; gap: 6px; }
-.tree-icon { color: #909399; }
+.manage-node { flex: 1; display: flex; justify-content: space-between; align-items: center; padding-right: 8px; }
+.manage-actions { display: none; gap: 10px; }
+.manage-node:hover .manage-actions { display: inline-flex; }
+.category-manage-header { display: flex; justify-content: flex-end; margin-bottom: 12px; }
 .table-panel { flex: 1; min-width: 0; }
 .search-bar { display: flex; gap: 12px; margin-bottom: 16px; }
 .search-input { width: 240px; }

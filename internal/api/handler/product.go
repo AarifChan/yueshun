@@ -42,6 +42,12 @@ func (h *ProductHandler) RegisterRoutes(r *gin.RouterGroup) {
 		product.PUT("/brands/:id", h.UpdateBrand)
 		product.DELETE("/brands/:id", h.DeleteBrand)
 
+		// 品牌分类
+		product.GET("/brand-categories/tree", h.GetBrandCategoryTree)
+		product.POST("/brand-categories", h.CreateBrandCategory)
+		product.PUT("/brand-categories/:id", h.UpdateBrandCategory)
+		product.DELETE("/brand-categories/:id", h.DeleteBrandCategory)
+
 		// 商品
 		product.GET("", h.ListProducts)
 		product.POST("", h.CreateProduct)
@@ -139,12 +145,55 @@ func (h *ProductHandler) GetCategoryTree(c *gin.Context) {
 	}
 
 	tree := buildCategoryTree(list, 0, countMap)
-	response.Ok(c, tree)
+
+	parentIDStr, hasParentID := c.GetQuery("parentId")
+	if !hasParentID {
+		response.Ok(c, tree)
+		return
+	}
+	parentID, err := strconv.ParseUint(parentIDStr, 10, 64)
+	if err != nil {
+		response.BadRequest(c, "请求参数错误")
+		return
+	}
+
+	nodeMap := make(map[uint]*CategoryTreeNode)
+	var flatten func(nodes []CategoryTreeNode)
+	flatten = func(nodes []CategoryTreeNode) {
+		for i := range nodes {
+			nodeMap[nodes[i].ID] = &nodes[i]
+			flatten(nodes[i].Children)
+		}
+	}
+	flatten(tree)
+
+	childSet := make(map[uint]bool)
+	for _, cat := range list {
+		childSet[cat.ParentID] = true
+	}
+
+	result := make([]CategoryTreeNode, 0)
+	for _, cat := range list {
+		if cat.ParentID != uint(parentID) {
+			continue
+		}
+		node := CategoryTreeNode{
+			ProductCategory: cat,
+			Children:        []CategoryTreeNode{},
+			HasChildren:     childSet[cat.ID],
+		}
+		if full, exists := nodeMap[cat.ID]; exists {
+			node.ProductCount = full.ProductCount
+		}
+		result = append(result, node)
+	}
+	response.Ok(c, result)
 }
 
 type CategoryTreeNode struct {
 	model.ProductCategory
 	ProductCount int64              `json:"productCount"`
+	HasChildren  bool               `json:"hasChildren"`
 	Children     []CategoryTreeNode `json:"children"`
 }
 
@@ -160,6 +209,7 @@ func buildCategoryTree(cats []model.ProductCategory, parentID uint, countMap map
 			result = append(result, CategoryTreeNode{
 				ProductCategory: cat,
 				ProductCount:    total,
+				HasChildren:     len(children) > 0,
 				Children:        children,
 			})
 		}
@@ -382,6 +432,163 @@ func (h *ProductHandler) FillCategoryImages(c *gin.Context) {
 	response.Ok(c, gin.H{"updated": updated})
 }
 
+// ==================== 品牌分类 ====================
+
+type CreateBrandCategoryReq struct {
+	ParentID uint   `json:"parentId"`
+	Name     string `json:"name" binding:"required,max=64"`
+	Sort     int    `json:"sort"`
+	Status   int8   `json:"status" binding:"oneof=0 1"`
+}
+
+type UpdateBrandCategoryReq struct {
+	ParentID uint   `json:"parentId"`
+	Name     string `json:"name" binding:"max=64"`
+	Sort     int    `json:"sort"`
+	Status   int8   `json:"status" binding:"oneof=0 1"`
+}
+
+type BrandCategoryTreeNode struct {
+	model.BrandCategory
+	Children []BrandCategoryTreeNode `json:"children"`
+}
+
+func buildBrandCategoryTree(cats []model.BrandCategory, parentID uint) []BrandCategoryTreeNode {
+	var result []BrandCategoryTreeNode
+	for _, cat := range cats {
+		if cat.ParentID == parentID {
+			result = append(result, BrandCategoryTreeNode{
+				BrandCategory: cat,
+				Children:      buildBrandCategoryTree(cats, cat.ID),
+			})
+		}
+	}
+	return result
+}
+
+func (h *ProductHandler) GetBrandCategoryTree(c *gin.Context) {
+	companyID := middleware.GetCompanyID(c)
+	if companyID == 0 {
+		response.Unauthorized(c, "未登录")
+		return
+	}
+
+	var list []model.BrandCategory
+	h.db.Where("company_id = ?", companyID).Order("sort ASC, created_at DESC").Find(&list)
+	response.Ok(c, buildBrandCategoryTree(list, 0))
+}
+
+func (h *ProductHandler) CreateBrandCategory(c *gin.Context) {
+	var req CreateBrandCategoryReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "请求参数错误")
+		return
+	}
+	companyID := middleware.GetCompanyID(c)
+	if companyID == 0 {
+		response.Unauthorized(c, "未登录")
+		return
+	}
+
+	if req.ParentID > 0 {
+		var parent model.BrandCategory
+		if err := h.db.Where("id = ? AND company_id = ?", req.ParentID, companyID).First(&parent).Error; err != nil {
+			response.BadRequest(c, "父分类不存在")
+			return
+		}
+	}
+
+	cat := model.BrandCategory{
+		BaseModelWithCompany: model.BaseModelWithCompany{CompanyID: companyID},
+		ParentID:             req.ParentID,
+		Name:                 req.Name,
+		Sort:                 req.Sort,
+		Status:               req.Status,
+	}
+	if err := h.db.Create(&cat).Error; err != nil {
+		log.Error().Err(err).Msg("create brand category failed")
+		response.ServerError(c, "创建失败")
+		return
+	}
+	response.Ok(c, cat)
+}
+
+func (h *ProductHandler) UpdateBrandCategory(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "ID 格式错误")
+		return
+	}
+	var req UpdateBrandCategoryReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "请求参数错误")
+		return
+	}
+	companyID := middleware.GetCompanyID(c)
+
+	var cat model.BrandCategory
+	if err := h.db.Where("id = ? AND company_id = ?", id, companyID).First(&cat).Error; err != nil {
+		response.NotFound(c, "分类不存在")
+		return
+	}
+
+	if req.ParentID > 0 {
+		if uint(id) == req.ParentID {
+			response.BadRequest(c, "不能将自身设为父分类")
+			return
+		}
+		var parent model.BrandCategory
+		if err := h.db.Where("id = ? AND company_id = ?", req.ParentID, companyID).First(&parent).Error; err != nil {
+			response.BadRequest(c, "父分类不存在")
+			return
+		}
+	}
+
+	if req.Name != "" {
+		cat.Name = req.Name
+	}
+	cat.ParentID = req.ParentID
+	cat.Sort = req.Sort
+	cat.Status = req.Status
+
+	if err := h.db.Save(&cat).Error; err != nil {
+		log.Error().Err(err).Msg("update brand category failed")
+		response.ServerError(c, "更新失败")
+		return
+	}
+	response.Ok(c, cat)
+}
+
+func (h *ProductHandler) DeleteBrandCategory(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "ID 格式错误")
+		return
+	}
+	companyID := middleware.GetCompanyID(c)
+
+	var childCount int64
+	h.db.Model(&model.BrandCategory{}).Where("parent_id = ? AND company_id = ?", id, companyID).Count(&childCount)
+	if childCount > 0 {
+		response.Fail(c, response.CodeBadRequest, "该分类下存在子分类，无法删除")
+		return
+	}
+
+	var brandCount int64
+	h.db.Model(&model.Brand{}).Where("category_id = ? AND company_id = ?", id, companyID).Count(&brandCount)
+	if brandCount > 0 {
+		response.Fail(c, response.CodeBadRequest, "该分类下存在品牌，无法删除")
+		return
+	}
+
+	if err := h.db.Where("id = ? AND company_id = ?", id, companyID).Delete(&model.BrandCategory{}).Error; err != nil {
+		log.Error().Err(err).Msg("delete brand category failed")
+		response.ServerError(c, "删除失败")
+		return
+	}
+	response.OkWithMessage(c, "删除成功", nil)
+}
+
 // ==================== 品牌 ====================
 
 type BrandListReq struct {
@@ -443,8 +650,8 @@ func (h *ProductHandler) ListBrands(c *gin.Context) {
 	query.Count(&total)
 
 	var list []BrandResp
-	query.Select("brands.*, product_categories.name AS category_name, (SELECT COUNT(*) FROM products WHERE products.brand_id = brands.id AND products.company_id = ? AND products.deleted_at IS NULL) AS product_count", companyID).
-		Joins("LEFT JOIN product_categories ON product_categories.id = brands.category_id").
+	query.Select("brands.*, brand_categories.name AS category_name, (SELECT COUNT(*) FROM products WHERE products.brand_id = brands.id AND products.company_id = ? AND products.deleted_at IS NULL) AS product_count", companyID).
+		Joins("LEFT JOIN brand_categories ON brand_categories.id = brands.category_id").
 		Order("brands.sort ASC, brands.created_at DESC").
 		Offset((req.Page - 1) * req.PageSize).Limit(req.PageSize).
 		Scan(&list)
@@ -465,7 +672,7 @@ func (h *ProductHandler) CreateBrand(c *gin.Context) {
 	}
 
 	if req.CategoryID > 0 {
-		var cat model.ProductCategory
+		var cat model.BrandCategory
 		if err := h.db.Where("id = ? AND company_id = ?", req.CategoryID, companyID).First(&cat).Error; err != nil {
 			response.BadRequest(c, "品牌分类不存在")
 			return
@@ -511,7 +718,7 @@ func (h *ProductHandler) UpdateBrand(c *gin.Context) {
 	}
 
 	if req.CategoryID > 0 {
-		var cat model.ProductCategory
+		var cat model.BrandCategory
 		if err := h.db.Where("id = ? AND company_id = ?", req.CategoryID, companyID).First(&cat).Error; err != nil {
 			response.BadRequest(c, "品牌分类不存在")
 			return

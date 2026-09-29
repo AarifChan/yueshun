@@ -283,7 +283,7 @@ async function handleCommand(command: string) {
   flex: 1;
   min-width: 0;
   display: flex;
-  align-items: stretch;
+  align-items: center;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
@@ -295,7 +295,8 @@ async function handleCommand(command: string) {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 0 14px;
+  padding: 7px 14px;
+  border-radius: 4px;
   font-size: 14px;
   color: rgba(255, 255, 255, 0.85);
   cursor: pointer;

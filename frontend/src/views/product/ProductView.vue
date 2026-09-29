@@ -10,44 +10,15 @@
     <div class="page-body">
       <aside class="category-panel" :class="{ collapsed: categoryPanelCollapsed }">
         <div v-show="!categoryPanelCollapsed" class="category-panel-content">
-          <div class="category-header">
-            <span class="category-title" @click="handleCategoryRootClick">
-              <el-icon class="category-toggle" :class="{ collapsed: treeCollapsed }" @click.stop="treeCollapsed = !treeCollapsed"><ArrowDown /></el-icon>
-              <span>商品分类</span>
-            </span>
-            <el-link type="primary" :underline="false" @click="router.push('/categories')">编辑</el-link>
-          </div>
-          <el-input
-            v-model="categoryKeyword"
-            placeholder="请输入分类名称"
-            clearable
-            :prefix-icon="Search"
-            class="category-search"
-            @keyup.enter="applyCategoryFilter"
-            @clear="applyCategoryFilter"
-          >
-            <template #append>
-              <el-button @click="applyCategoryFilter">搜 索</el-button>
-            </template>
-          </el-input>
-          <el-tree
-            v-show="!treeCollapsed"
-            ref="treeRef"
+          <SideTreePanel
+            ref="sideTreeRef"
+            title="商品分类"
             :data="categoryTree"
-            :props="{ label: 'name', children: 'children' }"
-            node-key="id"
-            highlight-current
-            :expand-on-click-node="false"
-            :filter-node-method="filterCategoryNode"
+            edit-to="/categories"
+            placeholder="请输入分类名称"
             @node-click="handleCategoryClick"
-          >
-            <template #default="{ data }">
-              <span class="tree-node">
-                <el-icon><Folder /></el-icon>
-                <span>{{ data.name }}</span>
-              </span>
-            </template>
-          </el-tree>
+            @title-click="handleCategoryRootClick"
+          />
         </div>
         <el-tooltip v-if="!categoryPanelCollapsed" content="收起" placement="right">
           <div class="panel-collapse-handle" @click="categoryPanelCollapsed = true">
@@ -410,7 +381,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowDown, ArrowRight, CaretBottom, Close, DArrowLeft, DArrowRight, Folder, MoreFilled, Picture, Plus, Rank, Refresh, Search, Setting, UploadFilled } from '@element-plus/icons-vue'
+import { ArrowDown, ArrowRight, CaretBottom, Close, DArrowLeft, DArrowRight, MoreFilled, Picture, Plus, Rank, Refresh, Search, Setting, UploadFilled } from '@element-plus/icons-vue'
 import type { UploadFile } from 'element-plus'
 import Sortable from 'sortablejs'
 import {
@@ -428,6 +399,7 @@ import {
 import { fetchCategoryTree, type CategoryNode } from '@/api/category'
 import { fetchTags, type ProductTag } from '@/api/tag'
 import { fetchBrandOptions, fetchProduct, fetchTopicCategories } from '@/api/productDetail'
+import SideTreePanel from '@/components/SideTreePanel.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -447,30 +419,15 @@ const filters = reactive<{ keyword: string; name: string; categoryId?: number; b
   topicCategory: '',
   stockStatus: '',
   hasImage: '',
-  status: 1,
+  status: '',
 })
 
 const categoryTree = ref<CategoryNode[]>([])
-const treeRef = ref()
+const sideTreeRef = ref()
 const tagOptions = ref<ProductTag[]>([])
-const categoryKeyword = ref('')
 const brandOptions = ref<{ id: number; name: string }[]>([])
 const topicOptions = ref<string[]>([])
-const treeCollapsed = ref(false)
 const categoryPanelCollapsed = ref(false)
-
-watch(categoryKeyword, (val) => {
-  treeRef.value?.filter(val)
-})
-
-function applyCategoryFilter() {
-  treeRef.value?.filter(categoryKeyword.value)
-}
-
-function filterCategoryNode(value: string, data: CategoryNode) {
-  if (!value) return true
-  return (data.name || '').toLowerCase().includes(value.toLowerCase())
-}
 
 function normalizeCategoryNodes(nodes: CategoryNode[]): CategoryNode[] {
   return nodes.map((n) => ({ ...n, children: n.children ? normalizeCategoryNodes(n.children) : [] }))
@@ -478,7 +435,7 @@ function normalizeCategoryNodes(nodes: CategoryNode[]): CategoryNode[] {
 
 function handleCategoryRootClick() {
   filters.categoryId = undefined
-  treeRef.value?.setCurrentKey(null)
+  sideTreeRef.value?.clearCurrentKey()
   pagination.page = 1
   fetchList()
 }
@@ -824,7 +781,7 @@ function clearDisabledFilterValues() {
   if (hidden.has('name')) filters.name = ''
   if (hidden.has('category')) {
     filters.categoryId = undefined
-    treeRef.value?.setCurrentKey(null)
+    sideTreeRef.value?.clearCurrentKey()
   }
   if (hidden.has('tag')) filters.tagId = undefined
   if (hidden.has('topic')) filters.topicCategory = ''
@@ -898,8 +855,12 @@ async function loadFilterConfig() {
 }
 
 function handleFilterCategoryChange(val?: number) {
-  if (!val) filters.categoryId = undefined
-  treeRef.value?.setCurrentKey(val || null)
+  if (!val) {
+    filters.categoryId = undefined
+    sideTreeRef.value?.clearCurrentKey()
+  } else {
+    sideTreeRef.value?.setCurrentKey(val)
+  }
   pagination.page = 1
   fetchList()
 }
@@ -1101,7 +1062,7 @@ onMounted(async () => {
       const nodes = Array.isArray(res.data.data) ? res.data.data : []
       categoryTree.value = normalizeCategoryNodes(nodes)
       if (filters.categoryId) {
-        treeRef.value?.setCurrentKey(filters.categoryId)
+        sideTreeRef.value?.setCurrentKey(filters.categoryId)
       }
     }
   } catch {
@@ -1201,17 +1162,6 @@ onBeforeUnmount(() => {
 }
 .panel-expand-strip:hover { background: var(--el-color-primary-light-7); }
 .panel-expand-text { writing-mode: vertical-lr; letter-spacing: 4px; font-size: 13px; }
-.category-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-weight: 600;
-  margin-bottom: 8px;
-}
-.category-title { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
-.category-toggle { transition: transform 0.2s ease; color: var(--el-text-color-secondary); }
-.category-toggle.collapsed { transform: rotate(-90deg); }
-.tree-node { display: inline-flex; align-items: center; gap: 4px; }
 .list-panel { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 .mode-tabs { margin-bottom: 12px; flex-shrink: 0; }
 .table-wrap { flex: 1; min-height: 0; }
@@ -1241,7 +1191,6 @@ onBeforeUnmount(() => {
 .import-summary { display: flex; gap: 12px; margin-bottom: 12px; }
 .col-setting-icon { cursor: pointer; color: var(--el-text-color-secondary); vertical-align: middle; }
 .col-setting-icon:hover { color: var(--el-color-primary); }
-.category-search { margin-bottom: 8px; }
 :deep(.expand-content-col) { padding: 0 !important; }
 :deep(.expand-content-col .el-table__expand-icon) { display: none; }
 .index-cell { display: flex; align-items: center; justify-content: center; cursor: pointer; min-height: 23px; }

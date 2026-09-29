@@ -123,10 +123,19 @@ type Brand struct {
 	Code        string `json:"code" gorm:"size:64;index"`
 	Description string `json:"description" gorm:"size:255"`
 	Image       string `json:"image" gorm:"size:255"`
-	CategoryID  uint   `json:"categoryId" gorm:"index;default:0"` // 0=未分类
+	CategoryID  uint   `json:"categoryId" gorm:"index;default:0"` // 品牌分类 id，0=未分类
 	ApplyImage  int8   `json:"applyImage" gorm:"default:0"`       // 应用为商品展示图 0否1是
 	Sort        int    `json:"sort" gorm:"default:0"`
 	Status      int8   `json:"status" gorm:"default:1"`
+}
+
+// BrandCategory 品牌分类（树形）
+type BrandCategory struct {
+	BaseModelWithCompany
+	ParentID uint   `json:"parentId" gorm:"index;default:0"`
+	Name     string `json:"name" gorm:"size:64;not null"`
+	Sort     int    `json:"sort" gorm:"default:0"`
+	Status   int8   `json:"status" gorm:"default:1"`
 }
 
 // ProductSeries 商品系列
@@ -237,7 +246,7 @@ type GoodsUnit struct {
 type ProductSpec struct {
 	BaseModelWithCompany
 	Name   string `json:"name" gorm:"size:64;not null"`
-	Values string `json:"values" gorm:"size:255"` // 可选值，逗号分隔
+	Values string `json:"values" gorm:"type:text"` // 可选值，逗号分隔
 	Remark string `json:"remark" gorm:"size:255"`
 	Sort   int    `json:"sort" gorm:"default:0"`
 	Status int8   `json:"status" gorm:"default:1"`

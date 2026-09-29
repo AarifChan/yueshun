@@ -12,12 +12,12 @@
 
     <div class="main">
       <div class="category-panel">
-        <div class="category-header">
-          <span>商品分类</span>
-          <el-link type="primary" :underline="false" @click="router.push('/categories')">编辑</el-link>
-        </div>
-        <el-tree :data="categoryTree" :props="{ label: 'name', children: 'children' }" node-key="id"
-          highlight-current :expand-on-click-node="false" @node-click="handleCategoryClick" />
+        <SideTreePanel
+          title="商品分类"
+          :data="categoryTree"
+          edit-to="/categories"
+          @node-click="handleCategoryClick"
+        />
       </div>
 
       <div class="content">
@@ -152,6 +152,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { UploadFilled } from '@element-plus/icons-vue'
 import { fetchCategoryTree, type CategoryNode } from '@/api/category'
+import SideTreePanel from '@/components/SideTreePanel.vue'
 import {
   fetchPriceManageList, updatePriceManage, importPriceManage, fetchSettings, saveSettings,
   type PriceManageItem, type PriceImportResult,
@@ -349,8 +350,7 @@ onMounted(() => {
 .page-title { font-size: 18px; font-weight: 600; }
 .tip { margin-bottom: 12px; }
 .main { display: flex; gap: 16px; }
-.category-panel { width: 180px; flex-shrink: 0; border: 1px solid var(--el-border-color); border-radius: 4px; padding: 8px; }
-.category-header { display: flex; justify-content: space-between; align-items: center; padding: 4px 8px 8px; font-weight: 600; border-bottom: 1px solid var(--el-border-color-lighter); margin-bottom: 8px; }
+.category-panel { width: 200px; flex-shrink: 0; border: 1px solid var(--el-border-color); border-radius: 4px; padding: 12px; }
 .content { flex: 1; min-width: 0; }
 .filter-row { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
 .pagination { margin-top: 16px; justify-content: flex-end; }

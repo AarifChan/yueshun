@@ -58,6 +58,7 @@ declare module 'vue' {
     RemoteSelect: typeof import('./src/components/RemoteSelect.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    SideTreePanel: typeof import('./src/components/SideTreePanel.vue')['default']
   }
   export interface GlobalDirectives {
     vLoading: typeof import('element-plus/es')['ElLoadingDirective']
