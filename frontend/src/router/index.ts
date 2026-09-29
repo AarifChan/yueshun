@@ -74,15 +74,13 @@ const router = createRouter({
                 title: '商品资料', icon: 'Goods',
                 items: [
                   { title: '商品信息', path: '/products' },
-                  { title: '规格单位条码', path: '/spec-unit-barcodes' },
-                  { title: '条码打印', path: '/barcode-print' },
                 ],
               },
               {
                 title: '价格管理', icon: 'PriceTag',
                 items: [
                   { title: '价格体系', path: '/price-levels' },
-                  { title: '客户单独定价', path: '/customer-prices' },
+                  { title: '商品物价管理', path: '/price-manage' },
                 ],
               },
               {
@@ -124,22 +122,10 @@ const router = createRouter({
               meta: { title: '价格体系', icon: 'PriceTag' },
             },
             {
-              path: 'customer-prices',
-              name: 'CustomerPrices',
-              component: () => import('@/views/price/CustomerPriceView.vue'),
-              meta: { title: '客户单独定价', icon: 'PriceTag' },
-            },
-            {
-              path: 'spec-unit-barcodes',
-              name: 'SpecUnitBarcodes',
-              component: () => import('@/views/product/SpecUnitBarcodeView.vue'),
-              meta: { title: '规格单位条码', icon: 'CollectionTag' },
-            },
-            {
-              path: 'barcode-print',
-              name: 'BarcodePrint',
-              component: () => import('@/views/product/BarcodePrintView.vue'),
-              meta: { title: '条码打印', icon: 'Printer' },
+              path: 'price-manage',
+              name: 'PriceManage',
+              component: () => import('@/views/price/PriceManageView.vue'),
+              meta: { title: '商品物价管理', icon: 'PriceTag' },
             },
             {
               path: 'product-units',
@@ -263,6 +249,12 @@ const router = createRouter({
               name: 'PurchaseReturns',
               component: () => import('@/views/purchase/ReturnView.vue'),
               meta: { title: '采购退货', icon: 'Back' },
+            },
+            {
+              path: 'suppliers',
+              name: 'Suppliers',
+              component: () => import('@/views/purchase/SupplierView.vue'),
+              meta: { title: '供应商管理', icon: 'OfficeBuilding' },
             },
             {
               path: 'purchase-payments',

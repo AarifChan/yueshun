@@ -23,17 +23,17 @@ type BaseModelWithCompany struct {
 // Employee 职员（系统用户）
 type Employee struct {
 	BaseModelWithCompany
-	DeptID       uint      `json:"deptId" gorm:"index;not null"`
-	RoleID       uint      `json:"roleId" gorm:"index;not null"`
-	Username     string    `json:"username" gorm:"size:64;uniqueIndex:idx_emp_username_company"`
-	Password     string    `json:"-" gorm:"size:128;not null"`
-	Name         string    `json:"name" gorm:"size:64;not null"`
-	Phone        string    `json:"phone" gorm:"size:20;index"`
-	Email        string    `json:"email" gorm:"size:128"`
-	Status       int8      `json:"status" gorm:"default:1;comment:1启用 0禁用"`
-	LastLoginAt  *time.Time `json:"lastLoginAt"`
-	LastLoginIP  string    `json:"lastLoginIp" gorm:"size:64"`
-	WeComUserID  string    `json:"wecomUserId" gorm:"size:64;index;comment:企业微信UserID"`
+	DeptID      uint       `json:"deptId" gorm:"index;not null"`
+	RoleID      uint       `json:"roleId" gorm:"index;not null"`
+	Username    string     `json:"username" gorm:"size:64;uniqueIndex:idx_emp_username_company"`
+	Password    string     `json:"-" gorm:"size:128;not null"`
+	Name        string     `json:"name" gorm:"size:64;not null"`
+	Phone       string     `json:"phone" gorm:"size:20;index"`
+	Email       string     `json:"email" gorm:"size:128"`
+	Status      int8       `json:"status" gorm:"default:1;comment:1启用 0禁用"`
+	LastLoginAt *time.Time `json:"lastLoginAt"`
+	LastLoginIP string     `json:"lastLoginIp" gorm:"size:64"`
+	WeComUserID string     `json:"wecomUserId" gorm:"size:64;index;comment:企业微信UserID"`
 }
 
 // Role 角色
@@ -48,13 +48,13 @@ type Role struct {
 // Permission 权限
 type Permission struct {
 	BaseModel
-	Name   string `json:"name" gorm:"size:64;not null"`
-	Code   string `json:"code" gorm:"size:128;uniqueIndex"`
-	Type   string `json:"type" gorm:"size:20;comment:menu|button|api|data"`
-	ParentID uint `json:"parentId" gorm:"default:0"`
-	Path   string `json:"path" gorm:"size:255"`
-	Sort   int    `json:"sort" gorm:"default:0"`
-	Status int8   `json:"status" gorm:"default:1"`
+	Name     string `json:"name" gorm:"size:64;not null"`
+	Code     string `json:"code" gorm:"size:128;uniqueIndex"`
+	Type     string `json:"type" gorm:"size:20;comment:menu|button|api|data"`
+	ParentID uint   `json:"parentId" gorm:"default:0"`
+	Path     string `json:"path" gorm:"size:255"`
+	Sort     int    `json:"sort" gorm:"default:0"`
+	Status   int8   `json:"status" gorm:"default:1"`
 }
 
 // RolePermission 角色权限关联
@@ -66,23 +66,23 @@ type RolePermission struct {
 // Department 部门
 type Department struct {
 	BaseModelWithCompany
-	ParentID    uint   `json:"parentId" gorm:"index;default:0"`
-	Name        string `json:"name" gorm:"size:64;not null"`
-	Code        string `json:"code" gorm:"size:64"`
-	ManagerID   uint   `json:"managerId"`
-	Sort        int    `json:"sort" gorm:"default:0"`
-	Status      int8   `json:"status" gorm:"default:1"`
+	ParentID  uint   `json:"parentId" gorm:"index;default:0"`
+	Name      string `json:"name" gorm:"size:64;not null"`
+	Code      string `json:"code" gorm:"size:64"`
+	ManagerID uint   `json:"managerId"`
+	Sort      int    `json:"sort" gorm:"default:0"`
+	Status    int8   `json:"status" gorm:"default:1"`
 }
 
 // Company 公司/租户
 type Company struct {
 	BaseModel
-	Name      string `json:"name" gorm:"size:128;not null"`
-	Code      string `json:"code" gorm:"size:64;uniqueIndex"`
-	Contact   string `json:"contact" gorm:"size:64"`
-	Phone     string `json:"phone" gorm:"size:20"`
-	Address   string `json:"address" gorm:"size:255"`
-	Status    int8   `json:"status" gorm:"default:1"`
+	Name    string `json:"name" gorm:"size:128;not null"`
+	Code    string `json:"code" gorm:"size:64;uniqueIndex"`
+	Contact string `json:"contact" gorm:"size:64"`
+	Phone   string `json:"phone" gorm:"size:20"`
+	Address string `json:"address" gorm:"size:255"`
+	Status  int8   `json:"status" gorm:"default:1"`
 }
 
 // DictType 字典类型
@@ -108,11 +108,12 @@ type DictItem struct {
 // ProductCategory 商品分类（树形）
 type ProductCategory struct {
 	BaseModelWithCompany
-	ParentID    uint   `json:"parentId" gorm:"index;default:0"`
-	Name        string `json:"name" gorm:"size:64;not null"`
-	Code        string `json:"code" gorm:"size:64"`
-	Sort        int    `json:"sort" gorm:"default:0"`
-	Status      int8   `json:"status" gorm:"default:1"`
+	ParentID uint   `json:"parentId" gorm:"index;default:0"`
+	Name     string `json:"name" gorm:"size:64;not null"`
+	Code     string `json:"code" gorm:"size:64"`
+	Image    string `json:"image" gorm:"size:255"`
+	Sort     int    `json:"sort" gorm:"default:0"`
+	Status   int8   `json:"status" gorm:"default:1"`
 }
 
 // Brand 品牌
@@ -121,53 +122,103 @@ type Brand struct {
 	Name        string `json:"name" gorm:"size:64;not null"`
 	Code        string `json:"code" gorm:"size:64;index"`
 	Description string `json:"description" gorm:"size:255"`
+	Image       string `json:"image" gorm:"size:255"`
+	CategoryID  uint   `json:"categoryId" gorm:"index;default:0"` // 0=未分类
+	ApplyImage  int8   `json:"applyImage" gorm:"default:0"`       // 应用为商品展示图 0否1是
+	Sort        int    `json:"sort" gorm:"default:0"`
 	Status      int8   `json:"status" gorm:"default:1"`
 }
 
 // ProductSeries 商品系列
 type ProductSeries struct {
 	BaseModelWithCompany
-	BrandID     uint   `json:"brandId" gorm:"index"`
-	Name        string `json:"name" gorm:"size:64;not null"`
-	Code        string `json:"code" gorm:"size:64;index"`
-	Status      int8   `json:"status" gorm:"default:1"`
+	BrandID uint   `json:"brandId" gorm:"index"`
+	Name    string `json:"name" gorm:"size:64;not null"`
+	Code    string `json:"code" gorm:"size:64;index"`
+	Status  int8   `json:"status" gorm:"default:1"`
 }
 
 // Product 商品资料
 type Product struct {
 	BaseModelWithCompany
-	CategoryID  uint    `json:"categoryId" gorm:"index;not null"`
-	BrandID     uint    `json:"brandId" gorm:"index"`
-	SeriesID    uint    `json:"seriesId" gorm:"index"`
-	Name        string  `json:"name" gorm:"size:128;not null"`
-	Code        string  `json:"code" gorm:"size:64;index"`
-	Barcode     string  `json:"barcode" gorm:"size:64;index"`
-	Specification string `json:"specification" gorm:"size:128"`
-	Unit        string  `json:"unit" gorm:"size:32;not null"`        // 主单位
-	PurchasePrice float64 `json:"purchasePrice" gorm:"type:decimal(18,4);default:0"`
-	RetailPrice   float64 `json:"retailPrice" gorm:"type:decimal(18,4);default:0"`
+	CategoryID     uint    `json:"categoryId" gorm:"index;not null"`
+	BrandID        uint    `json:"brandId" gorm:"index"`
+	SeriesID       uint    `json:"seriesId" gorm:"index"`
+	Name           string  `json:"name" gorm:"size:128;not null"`
+	Code           string  `json:"code" gorm:"size:64;index"`
+	Barcode        string  `json:"barcode" gorm:"size:64;index"`
+	Specification  string  `json:"specification" gorm:"size:128"`
+	Unit           string  `json:"unit" gorm:"size:32;not null"` // 主单位
+	PurchasePrice  float64 `json:"purchasePrice" gorm:"type:decimal(18,4);default:0"`
+	RetailPrice    float64 `json:"retailPrice" gorm:"type:decimal(18,4);default:0"`
 	WholesalePrice float64 `json:"wholesalePrice" gorm:"type:decimal(18,4);default:0"`
-	MinStock      float64 `json:"minStock" gorm:"type:decimal(18,4);default:0"`
-	MaxStock      float64 `json:"maxStock" gorm:"type:decimal(18,4);default:0"`
-	Description   string  `json:"description" gorm:"size:500"`
-	Status        int8    `json:"status" gorm:"default:1"`
+	MinStock       float64 `json:"minStock" gorm:"type:decimal(18,4);default:0"`
+	MaxStock       float64 `json:"maxStock" gorm:"type:decimal(18,4);default:0"`
+	Description    string  `json:"description" gorm:"size:500"`
+	Status         int8    `json:"status" gorm:"default:1"`
+
+	Image                   string  `json:"image" gorm:"size:255"`                 // 商品主图
+	MallName                string  `json:"mallName" gorm:"size:128"`              // 商城展示名称
+	PinyinCode              string  `json:"pinyinCode" gorm:"size:128"`            // 拼音码
+	VideoURL                string  `json:"videoUrl" gorm:"size:255"`
+	DetailContent           string  `json:"detailContent" gorm:"type:text"`        // 商品详情 JSON 块
+	TopicCategory           string  `json:"topicCategory" gorm:"size:64"`          // 专题分类
+	MinOrderQty             float64 `json:"minOrderQty" gorm:"default:0"`          // 起订量
+	MaxOrderQty             float64 `json:"maxOrderQty" gorm:"default:0"`          // 限订量
+	OrderByMultiple         int8    `json:"orderByMultiple" gorm:"default:0"`      // 按起订量倍数订购
+	NoAvailableStockControl int8    `json:"noAvailableStockControl" gorm:"default:0"`
+	NoBookStockControl      int8    `json:"noBookStockControl" gorm:"default:0"`
+	ManualLevelPriceDefault int8    `json:"manualLevelPriceDefault" gorm:"default:0"` // 手动设置的级别价取默认订货价
+	AuxPriceReverseCalc     int8    `json:"auxPriceReverseCalc" gorm:"default:0"`     // 辅助单位价格变更后反算基本单位价格
+
+	MinSalePrice        float64 `json:"minSalePrice" gorm:"type:decimal(18,4);default:0"` // 最低售价
+	MallSortWeight      int     `json:"mallSortWeight" gorm:"default:0"`                  // 商城排序权重
+	SearchKeywords      string  `json:"searchKeywords" gorm:"size:255"`                   // 搜索关键词
+	WarehouseID         uint    `json:"warehouseId" gorm:"index;default:0"`               // 出库仓库
+	SupplierID          uint    `json:"supplierId" gorm:"index;default:0"`                // 默认供应商
+	ForbidPurchaseUnits string  `json:"forbidPurchaseUnits" gorm:"size:255"`              // 禁购单位(逗号分隔单位名)
+}
+
+// ProductSpecItem 商品规格行
+type ProductSpecItem struct {
+	BaseModelWithCompany
+	ProductID uint    `json:"productId" gorm:"index;not null"`
+	SpecValue string  `json:"specValue" gorm:"size:200"`
+	Code      string  `json:"code" gorm:"size:64"`
+	Barcode   string  `json:"barcode" gorm:"size:64"`
+	Weight    float64 `json:"weight" gorm:"default:0"`
+	Volume    float64 `json:"volume" gorm:"default:0"`
+	Remark1   string  `json:"remark1" gorm:"size:200"`
+	Remark2   string  `json:"remark2" gorm:"size:200"`
+	OnShelf   int8    `json:"onShelf"` // 1上架 0下架（默认逻辑在 handler，gorm default 会吞掉显式 0）
+	Sort      int     `json:"sort" gorm:"default:0"`
 }
 
 // ProductUnit 商品辅助单位
 type ProductUnit struct {
 	BaseModel
-	ProductID   uint    `json:"productId" gorm:"index;not null"`
-	Name        string  `json:"name" gorm:"size:32;not null"`         // 单位名称
-	Conversion  float64 `json:"conversion" gorm:"type:decimal(18,4);default:1"` // 换算系数（相对于主单位）
-	IsDefault   bool    `json:"isDefault" gorm:"default:false"`       // 是否默认单位
-	Status      int8    `json:"status" gorm:"default:1"`
+	ProductID       uint    `json:"productId" gorm:"index;not null"`
+	Name            string  `json:"name" gorm:"size:32;not null"`                   // 单位名称
+	Conversion      float64 `json:"conversion" gorm:"type:decimal(18,4);default:1"` // 换算系数（相对于主单位）
+	IsDefault       bool    `json:"isDefault" gorm:"default:false"`                 // 是否默认单位
+	Barcode         string  `json:"barcode" gorm:"size:64"`
+	AllowSale       int8    `json:"allowSale"` // 1允许销售 0不允许（默认逻辑在 handler，gorm default 会吞掉显式 0）
+	DefaultSale     int8    `json:"defaultSale" gorm:"default:0"`
+	DefaultPurchase int8    `json:"defaultPurchase" gorm:"default:0"`
+	StorageType     int8    `json:"storageType" gorm:"default:1"` // 1散货 2整件
+	RefPrice        float64 `json:"refPrice" gorm:"type:decimal(18,4);default:0"`
+	WholesalePrice  float64 `json:"wholesalePrice" gorm:"type:decimal(18,4);default:0"`
+	RetailPrice     float64 `json:"retailPrice" gorm:"type:decimal(18,4);default:0"`
+	MinSalePrice    float64 `json:"minSalePrice" gorm:"type:decimal(18,4);default:0"`
+	DefaultPrice    float64 `json:"defaultPrice" gorm:"type:decimal(18,4);default:0"`
+	Status          int8    `json:"status" gorm:"default:1"`
 }
 
 // ProductBarcode 商品条码（多单位条码）
 type ProductBarcode struct {
 	BaseModel
 	ProductID uint   `json:"productId" gorm:"index;not null"`
-	UnitID    uint   `json:"unitId" gorm:"index;default:0"`        // 0=主单位
+	UnitID    uint   `json:"unitId" gorm:"index;default:0"` // 0=主单位
 	Barcode   string `json:"barcode" gorm:"size:64;not null;index"`
 	Status    int8   `json:"status" gorm:"default:1"`
 }
@@ -175,9 +226,11 @@ type ProductBarcode struct {
 // GoodsUnit 商品单位（字典）
 type GoodsUnit struct {
 	BaseModelWithCompany
-	Name   string `json:"name" gorm:"size:32;not null"`
-	Code   string `json:"code" gorm:"size:32;index"`
-	Status int8   `json:"status" gorm:"default:1"`
+	Name        string `json:"name" gorm:"size:32;not null"`
+	Code        string `json:"code" gorm:"size:32;index"`
+	Sort        int    `json:"sort" gorm:"default:0"`
+	StorageType int8   `json:"storageType" gorm:"default:1"` // 1=散货，2=整件
+	Status      int8   `json:"status" gorm:"default:1"`
 }
 
 // ProductSpec 商品规格（如颜色、尺寸）
@@ -186,15 +239,29 @@ type ProductSpec struct {
 	Name   string `json:"name" gorm:"size:64;not null"`
 	Values string `json:"values" gorm:"size:255"` // 可选值，逗号分隔
 	Remark string `json:"remark" gorm:"size:255"`
+	Sort   int    `json:"sort" gorm:"default:0"`
 	Status int8   `json:"status" gorm:"default:1"`
 }
 
 // ProductTag 商品标签
 type ProductTag struct {
 	BaseModelWithCompany
-	Name   string `json:"name" gorm:"size:64;not null"`
-	Color  string `json:"color" gorm:"size:16;default:'#409EFF'"`
-	Status int8   `json:"status" gorm:"default:1"`
+	Name       string `json:"name" gorm:"size:64;not null"`
+	Color      string `json:"color" gorm:"size:16;default:'#409EFF'"`
+	Type       int8   `json:"type" gorm:"default:1;comment:1手动 2智能"`
+	Rule       string `json:"rule" gorm:"size:4000"`
+	Filterable int8   `json:"filterable" gorm:"default:1;comment:商城支持筛选"`
+	ShowInList int8   `json:"showInList" gorm:"default:0;comment:商城列表展示"`
+	ShowBadge  int8   `json:"showBadge" gorm:"default:0;comment:商品卡片角标"`
+	Sort       int    `json:"sort" gorm:"default:0"`
+	Status     int8   `json:"status" gorm:"default:1"`
+}
+
+// ProductTagRelation 商品-标签关联
+type ProductTagRelation struct {
+	BaseModelWithCompany
+	ProductID uint `json:"productId" gorm:"index;not null"`
+	TagID     uint `json:"tagId" gorm:"index;not null"`
 }
 
 // ProductSalesScope 商品销售范围
@@ -203,6 +270,14 @@ type ProductSalesScope struct {
 	Name   string `json:"name" gorm:"size:64;not null"`
 	Code   string `json:"code" gorm:"size:32;index"`
 	Status int8   `json:"status" gorm:"default:1"`
+}
+
+// ProductSaleRule 商品销售范围规则
+type ProductSaleRule struct {
+	BaseModelWithCompany
+	TargetType string `json:"targetType" gorm:"size:16;not null;index:idx_sale_rule"` // category/brand/supplier/product
+	TargetID   uint   `json:"targetId" gorm:"not null;index:idx_sale_rule"`
+	Rule       string `json:"rule" gorm:"size:4000"`
 }
 
 // ==================== 客户/供应商模块 ====================
@@ -227,6 +302,23 @@ type Region struct {
 	Status   int8   `json:"status" gorm:"default:1"`
 }
 
+// CustomerTag 客户标签
+type CustomerTag struct {
+	BaseModelWithCompany
+	Name   string `json:"name" gorm:"size:64;not null"`
+	Status int8   `json:"status" gorm:"default:1"`
+}
+
+// Supplier 供应商
+type Supplier struct {
+	BaseModelWithCompany
+	Name    string `json:"name" gorm:"size:64;not null"`
+	Code    string `json:"code" gorm:"size:64"`
+	Contact string `json:"contact" gorm:"size:64"`
+	Phone   string `json:"phone" gorm:"size:32"`
+	Status  int8   `json:"status" gorm:"default:1"`
+}
+
 // CustomerLevel 客户等级
 type CustomerLevel struct {
 	BaseModelWithCompany
@@ -242,25 +334,25 @@ type CustomerLevel struct {
 // Customer 客户/供应商
 type Customer struct {
 	BaseModelWithCompany
-	CategoryID  uint    `json:"categoryId" gorm:"index"`
-	RegionID    uint    `json:"regionId" gorm:"index"`
-	LevelID     uint    `json:"levelId" gorm:"index"`
-	Name        string  `json:"name" gorm:"size:128;not null"`
-	Code        string  `json:"code" gorm:"size:64;index"`
-	Type        string  `json:"type" gorm:"size:20;default:customer;comment:customer客户 supplier供应商 both两者"`
-	Contact     string  `json:"contact" gorm:"size:64"`
-	Phone       string  `json:"phone" gorm:"size:20;index"`
-	Email       string  `json:"email" gorm:"size:128"`
-	Address     string  `json:"address" gorm:"size:255"`
-	CreditLimit float64 `json:"creditLimit" gorm:"type:decimal(18,4);default:0"`   // 信用额度
-	CreditDays  int     `json:"creditDays" gorm:"default:0"`                      // 账期天数
-	Balance     float64 `json:"balance" gorm:"type:decimal(18,4);default:0"`      // 欠款余额（正=欠款）
-	LastOrderAt *time.Time `json:"lastOrderAt" gorm:"index"`                    // 最近下单时间
-	TaxNo       string  `json:"taxNo" gorm:"size:64"`                             // 税号
-	BankName    string  `json:"bankName" gorm:"size:128"`
-	BankAccount string  `json:"bankAccount" gorm:"size:64"`
-	Remark      string  `json:"remark" gorm:"size:500"`
-	Status      int8    `json:"status" gorm:"default:1"`
+	CategoryID  uint       `json:"categoryId" gorm:"index"`
+	RegionID    uint       `json:"regionId" gorm:"index"`
+	LevelID     uint       `json:"levelId" gorm:"index"`
+	Name        string     `json:"name" gorm:"size:128;not null"`
+	Code        string     `json:"code" gorm:"size:64;index"`
+	Type        string     `json:"type" gorm:"size:20;default:customer;comment:customer客户 supplier供应商 both两者"`
+	Contact     string     `json:"contact" gorm:"size:64"`
+	Phone       string     `json:"phone" gorm:"size:20;index"`
+	Email       string     `json:"email" gorm:"size:128"`
+	Address     string     `json:"address" gorm:"size:255"`
+	CreditLimit float64    `json:"creditLimit" gorm:"type:decimal(18,4);default:0"` // 信用额度
+	CreditDays  int        `json:"creditDays" gorm:"default:0"`                     // 账期天数
+	Balance     float64    `json:"balance" gorm:"type:decimal(18,4);default:0"`     // 欠款余额（正=欠款）
+	LastOrderAt *time.Time `json:"lastOrderAt" gorm:"index"`                        // 最近下单时间
+	TaxNo       string     `json:"taxNo" gorm:"size:64"`                            // 税号
+	BankName    string     `json:"bankName" gorm:"size:128"`
+	BankAccount string     `json:"bankAccount" gorm:"size:64"`
+	Remark      string     `json:"remark" gorm:"size:500"`
+	Status      int8       `json:"status" gorm:"default:1"`
 }
 
 // ==================== 仓库/资金模块 ====================
@@ -268,11 +360,11 @@ type Customer struct {
 // Warehouse 仓库
 type Warehouse struct {
 	BaseModelWithCompany
-	Name        string `json:"name" gorm:"size:64;not null"`
-	Code        string `json:"code" gorm:"size:64;index"`
-	Address     string `json:"address" gorm:"size:255"`
-	ManagerID   uint   `json:"managerId"`
-	Status      int8   `json:"status" gorm:"default:1"`
+	Name      string `json:"name" gorm:"size:64;not null"`
+	Code      string `json:"code" gorm:"size:64;index"`
+	Address   string `json:"address" gorm:"size:255"`
+	ManagerID uint   `json:"managerId"`
+	Status    int8   `json:"status" gorm:"default:1"`
 }
 
 // WarehousePosition 仓位
@@ -298,11 +390,11 @@ type Account struct {
 // IncomeExpenseItem 收支项目
 type IncomeExpenseItem struct {
 	BaseModelWithCompany
-	Name     string `json:"name" gorm:"size:64;not null"`
-	Code     string `json:"code" gorm:"size:64;index"`
-	Type     string `json:"type" gorm:"size:10;not null;comment:income收入 expense支出"`
-	Sort     int    `json:"sort" gorm:"default:0"`
-	Status   int8   `json:"status" gorm:"default:1"`
+	Name   string `json:"name" gorm:"size:64;not null"`
+	Code   string `json:"code" gorm:"size:64;index"`
+	Type   string `json:"type" gorm:"size:10;not null;comment:income收入 expense支出"`
+	Sort   int    `json:"sort" gorm:"default:0"`
+	Status int8   `json:"status" gorm:"default:1"`
 }
 
 // AccountFlow 资金账户流水
@@ -343,34 +435,32 @@ type PriceLevel struct {
 // ProductPrice 商品价格矩阵
 type ProductPrice struct {
 	BaseModel
-	ProductID uint    `json:"productId" gorm:"index;not null"`
-	UnitID    uint    `json:"unitId" gorm:"index;default:0"`  // 0=主单位
-	LevelID   uint    `json:"levelId" gorm:"index"`           // 价格体系ID
-	CustomerID uint   `json:"customerId" gorm:"index;default:0"` // 0=非专属
-	Price     float64 `json:"price" gorm:"type:decimal(18,4);default:0"`
-	Status    int8    `json:"status" gorm:"default:1"`
+	ProductID  uint    `json:"productId" gorm:"index;not null"`
+	UnitID     uint    `json:"unitId" gorm:"index;default:0"`     // 0=主单位
+	LevelID    uint    `json:"levelId" gorm:"index"`              // 价格体系ID
+	CustomerID uint    `json:"customerId" gorm:"index;default:0"` // 0=非专属
+	Price      float64 `json:"price" gorm:"type:decimal(18,4);default:0"`
+	Status     int8    `json:"status" gorm:"default:1"`
 }
-
-// CustomerProductPrice 客户专属价（简化版，复用 ProductPrice）
 
 // ==================== 采购模块 ====================
 
 // PurchaseOrder 采购订单
 type PurchaseOrder struct {
 	BaseModelWithCompany
-	SupplierID   uint      `json:"supplierId" gorm:"index;not null"`
-	WarehouseID  uint      `json:"warehouseId" gorm:"index;not null"`
-	OrderNo      string    `json:"orderNo" gorm:"size:64;index;not null"`
-	OrderDate    time.Time `json:"orderDate" gorm:"type:date"`
-	DeliveryDate time.Time `json:"deliveryDate" gorm:"type:date"`
-	Amount       float64   `json:"amount" gorm:"type:decimal(18,4);default:0"`
-	Discount     float64   `json:"discount" gorm:"type:decimal(18,4);default:0"`
-	TaxAmount    float64   `json:"taxAmount" gorm:"type:decimal(18,4);default:0"`
-	TotalAmount  float64   `json:"totalAmount" gorm:"type:decimal(18,4);default:0"`
-	PaidAmount   float64   `json:"paidAmount" gorm:"type:decimal(18,4);default:0"`
-	Status       string    `json:"status" gorm:"size:20;default:draft;comment:draft草稿 confirmed已确认 partial部分入库 completed已完成 cancelled已取消"`
-	OperatorID   uint      `json:"operatorId" gorm:"index"`
-	Remark       string    `json:"remark" gorm:"size:500"`
+	SupplierID   uint                `json:"supplierId" gorm:"index;not null"`
+	WarehouseID  uint                `json:"warehouseId" gorm:"index;not null"`
+	OrderNo      string              `json:"orderNo" gorm:"size:64;index;not null"`
+	OrderDate    time.Time           `json:"orderDate" gorm:"type:date"`
+	DeliveryDate time.Time           `json:"deliveryDate" gorm:"type:date"`
+	Amount       float64             `json:"amount" gorm:"type:decimal(18,4);default:0"`
+	Discount     float64             `json:"discount" gorm:"type:decimal(18,4);default:0"`
+	TaxAmount    float64             `json:"taxAmount" gorm:"type:decimal(18,4);default:0"`
+	TotalAmount  float64             `json:"totalAmount" gorm:"type:decimal(18,4);default:0"`
+	PaidAmount   float64             `json:"paidAmount" gorm:"type:decimal(18,4);default:0"`
+	Status       string              `json:"status" gorm:"size:20;default:draft;comment:draft草稿 confirmed已确认 partial部分入库 completed已完成 cancelled已取消"`
+	OperatorID   uint                `json:"operatorId" gorm:"index"`
+	Remark       string              `json:"remark" gorm:"size:500"`
 	Items        []PurchaseOrderItem `json:"items" gorm:"foreignKey:OrderID"`
 }
 
@@ -394,18 +484,18 @@ type PurchaseOrderItem struct {
 // PurchaseInStock 采购入库单
 type PurchaseInStock struct {
 	BaseModelWithCompany
-	SupplierID  uint      `json:"supplierId" gorm:"index;not null"`
-	WarehouseID uint      `json:"warehouseId" gorm:"index;not null"`
-	OrderID     uint      `json:"orderId" gorm:"index;default:0"`
-	BillNo      string    `json:"billNo" gorm:"size:64;index;not null"`
-	BillDate    time.Time `json:"billDate" gorm:"type:date"`
-	Amount      float64   `json:"amount" gorm:"type:decimal(18,4);default:0"`
-	Discount    float64   `json:"discount" gorm:"type:decimal(18,4);default:0"`
-	TotalAmount float64   `json:"totalAmount" gorm:"type:decimal(18,4);default:0"`
-	PaidAmount  float64   `json:"paidAmount" gorm:"type:decimal(18,4);default:0"`
-	Status      string    `json:"status" gorm:"size:20;default:pending;comment:pending待审核 completed已完成"`
-	OperatorID  uint      `json:"operatorId" gorm:"index"`
-	Remark      string    `json:"remark" gorm:"size:500"`
+	SupplierID  uint                  `json:"supplierId" gorm:"index;not null"`
+	WarehouseID uint                  `json:"warehouseId" gorm:"index;not null"`
+	OrderID     uint                  `json:"orderId" gorm:"index;default:0"`
+	BillNo      string                `json:"billNo" gorm:"size:64;index;not null"`
+	BillDate    time.Time             `json:"billDate" gorm:"type:date"`
+	Amount      float64               `json:"amount" gorm:"type:decimal(18,4);default:0"`
+	Discount    float64               `json:"discount" gorm:"type:decimal(18,4);default:0"`
+	TotalAmount float64               `json:"totalAmount" gorm:"type:decimal(18,4);default:0"`
+	PaidAmount  float64               `json:"paidAmount" gorm:"type:decimal(18,4);default:0"`
+	Status      string                `json:"status" gorm:"size:20;default:pending;comment:pending待审核 completed已完成"`
+	OperatorID  uint                  `json:"operatorId" gorm:"index"`
+	Remark      string                `json:"remark" gorm:"size:500"`
 	Items       []PurchaseInStockItem `json:"items" gorm:"foreignKey:InStockID"`
 }
 
@@ -428,16 +518,16 @@ type PurchaseInStockItem struct {
 // PurchaseReturn 采购退货单
 type PurchaseReturn struct {
 	BaseModelWithCompany
-	SupplierID  uint      `json:"supplierId" gorm:"index;not null"`
-	WarehouseID uint      `json:"warehouseId" gorm:"index;not null"`
-	InStockID   uint      `json:"inStockId" gorm:"index;default:0"`
-	BillNo      string    `json:"billNo" gorm:"size:64;index;not null"`
-	BillDate    time.Time `json:"billDate" gorm:"type:date"`
-	Amount      float64   `json:"amount" gorm:"type:decimal(18,4);default:0"`
-	TotalAmount float64   `json:"totalAmount" gorm:"type:decimal(18,4);default:0"`
-	Status      string    `json:"status" gorm:"size:20;default:pending;comment:pending待审核 completed已完成"`
-	OperatorID  uint      `json:"operatorId" gorm:"index"`
-	Remark      string    `json:"remark" gorm:"size:500"`
+	SupplierID  uint                 `json:"supplierId" gorm:"index;not null"`
+	WarehouseID uint                 `json:"warehouseId" gorm:"index;not null"`
+	InStockID   uint                 `json:"inStockId" gorm:"index;default:0"`
+	BillNo      string               `json:"billNo" gorm:"size:64;index;not null"`
+	BillDate    time.Time            `json:"billDate" gorm:"type:date"`
+	Amount      float64              `json:"amount" gorm:"type:decimal(18,4);default:0"`
+	TotalAmount float64              `json:"totalAmount" gorm:"type:decimal(18,4);default:0"`
+	Status      string               `json:"status" gorm:"size:20;default:pending;comment:pending待审核 completed已完成"`
+	OperatorID  uint                 `json:"operatorId" gorm:"index"`
+	Remark      string               `json:"remark" gorm:"size:500"`
 	Items       []PurchaseReturnItem `json:"items" gorm:"foreignKey:ReturnID"`
 }
 
@@ -457,16 +547,16 @@ type PurchaseReturnItem struct {
 // PurchasePayment 采购付款单
 type PurchasePayment struct {
 	BaseModelWithCompany
-	SupplierID  uint      `json:"supplierId" gorm:"index;not null"`
-	AccountID   uint      `json:"accountId" gorm:"index;not null"`
-	BillNo      string    `json:"billNo" gorm:"size:64;index;not null"`
-	BillDate    time.Time `json:"billDate" gorm:"type:date"`
-	Amount      float64   `json:"amount" gorm:"type:decimal(18,4);default:0"`
-	Discount    float64   `json:"discount" gorm:"type:decimal(18,4);default:0"`
-	TotalAmount float64   `json:"totalAmount" gorm:"type:decimal(18,4);default:0"`
-	Status      string    `json:"status" gorm:"size:20;default:pending;comment:pending待审核 completed已完成"`
-	OperatorID  uint      `json:"operatorId" gorm:"index"`
-	Remark      string    `json:"remark" gorm:"size:500"`
+	SupplierID  uint                  `json:"supplierId" gorm:"index;not null"`
+	AccountID   uint                  `json:"accountId" gorm:"index;not null"`
+	BillNo      string                `json:"billNo" gorm:"size:64;index;not null"`
+	BillDate    time.Time             `json:"billDate" gorm:"type:date"`
+	Amount      float64               `json:"amount" gorm:"type:decimal(18,4);default:0"`
+	Discount    float64               `json:"discount" gorm:"type:decimal(18,4);default:0"`
+	TotalAmount float64               `json:"totalAmount" gorm:"type:decimal(18,4);default:0"`
+	Status      string                `json:"status" gorm:"size:20;default:pending;comment:pending待审核 completed已完成"`
+	OperatorID  uint                  `json:"operatorId" gorm:"index"`
+	Remark      string                `json:"remark" gorm:"size:500"`
 	Items       []PurchasePaymentItem `json:"items" gorm:"foreignKey:PaymentID"`
 }
 
@@ -486,54 +576,54 @@ type PurchasePaymentItem struct {
 // SalesOrder 销售订单
 type SalesOrder struct {
 	BaseModelWithCompany
-	CustomerID   uint      `json:"customerId" gorm:"index;not null"`
-	WarehouseID  uint      `json:"warehouseId" gorm:"index;not null"`
-	OrderNo      string    `json:"orderNo" gorm:"size:64;index;not null"`
-	OrderDate    time.Time `json:"orderDate" gorm:"type:date"`
-	DeliveryDate time.Time `json:"deliveryDate" gorm:"type:date"`
-	Amount       float64   `json:"amount" gorm:"type:decimal(18,4);default:0"`
-	Discount     float64   `json:"discount" gorm:"type:decimal(18,4);default:0"`
-	TaxAmount    float64   `json:"taxAmount" gorm:"type:decimal(18,4);default:0"`
-	TotalAmount  float64   `json:"totalAmount" gorm:"type:decimal(18,4);default:0"`
-	PaidAmount   float64   `json:"paidAmount" gorm:"type:decimal(18,4);default:0"`
-	Status       string    `json:"status" gorm:"size:20;default:draft;comment:draft草稿 confirmed已确认 partial部分出库 completed已完成 cancelled已取消"`
-	OperatorID   uint      `json:"operatorId" gorm:"index"`
-	Remark       string    `json:"remark" gorm:"size:500"`
+	CustomerID   uint             `json:"customerId" gorm:"index;not null"`
+	WarehouseID  uint             `json:"warehouseId" gorm:"index;not null"`
+	OrderNo      string           `json:"orderNo" gorm:"size:64;index;not null"`
+	OrderDate    time.Time        `json:"orderDate" gorm:"type:date"`
+	DeliveryDate time.Time        `json:"deliveryDate" gorm:"type:date"`
+	Amount       float64          `json:"amount" gorm:"type:decimal(18,4);default:0"`
+	Discount     float64          `json:"discount" gorm:"type:decimal(18,4);default:0"`
+	TaxAmount    float64          `json:"taxAmount" gorm:"type:decimal(18,4);default:0"`
+	TotalAmount  float64          `json:"totalAmount" gorm:"type:decimal(18,4);default:0"`
+	PaidAmount   float64          `json:"paidAmount" gorm:"type:decimal(18,4);default:0"`
+	Status       string           `json:"status" gorm:"size:20;default:draft;comment:draft草稿 confirmed已确认 partial部分出库 completed已完成 cancelled已取消"`
+	OperatorID   uint             `json:"operatorId" gorm:"index"`
+	Remark       string           `json:"remark" gorm:"size:500"`
 	Items        []SalesOrderItem `json:"items" gorm:"foreignKey:OrderID"`
 }
 
 // SalesOrderItem 销售订单明细
 type SalesOrderItem struct {
 	BaseModel
-	OrderID     uint    `json:"orderId" gorm:"index;not null"`
-	ProductID   uint    `json:"productId" gorm:"index;not null"`
-	UnitID      uint    `json:"unitId" gorm:"index;default:0"`
-	Quantity    float64 `json:"quantity" gorm:"type:decimal(18,4);default:0"`
-	Price       float64 `json:"price" gorm:"type:decimal(18,4);default:0"`
-	Amount      float64 `json:"amount" gorm:"type:decimal(18,4);default:0"`
-	Discount    float64 `json:"discount" gorm:"type:decimal(18,4);default:0"`
-	TaxRate     float64 `json:"taxRate" gorm:"type:decimal(8,4);default:0"`
-	TaxAmount   float64 `json:"taxAmount" gorm:"type:decimal(18,4);default:0"`
-	TotalAmount float64 `json:"totalAmount" gorm:"type:decimal(18,4);default:0"`
+	OrderID      uint    `json:"orderId" gorm:"index;not null"`
+	ProductID    uint    `json:"productId" gorm:"index;not null"`
+	UnitID       uint    `json:"unitId" gorm:"index;default:0"`
+	Quantity     float64 `json:"quantity" gorm:"type:decimal(18,4);default:0"`
+	Price        float64 `json:"price" gorm:"type:decimal(18,4);default:0"`
+	Amount       float64 `json:"amount" gorm:"type:decimal(18,4);default:0"`
+	Discount     float64 `json:"discount" gorm:"type:decimal(18,4);default:0"`
+	TaxRate      float64 `json:"taxRate" gorm:"type:decimal(8,4);default:0"`
+	TaxAmount    float64 `json:"taxAmount" gorm:"type:decimal(18,4);default:0"`
+	TotalAmount  float64 `json:"totalAmount" gorm:"type:decimal(18,4);default:0"`
 	DeliveredQty float64 `json:"deliveredQty" gorm:"type:decimal(18,4);default:0"`
-	Remark      string  `json:"remark" gorm:"size:255"`
+	Remark       string  `json:"remark" gorm:"size:255"`
 }
 
 // SalesOutStock 销售出库单
 type SalesOutStock struct {
 	BaseModelWithCompany
-	CustomerID  uint      `json:"customerId" gorm:"index;not null"`
-	WarehouseID uint      `json:"warehouseId" gorm:"index;not null"`
-	OrderID     uint      `json:"orderId" gorm:"index;default:0"`
-	BillNo      string    `json:"billNo" gorm:"size:64;index;not null"`
-	BillDate    time.Time `json:"billDate" gorm:"type:date"`
-	Amount      float64   `json:"amount" gorm:"type:decimal(18,4);default:0"`
-	Discount    float64   `json:"discount" gorm:"type:decimal(18,4);default:0"`
-	TotalAmount float64   `json:"totalAmount" gorm:"type:decimal(18,4);default:0"`
-	PaidAmount  float64   `json:"paidAmount" gorm:"type:decimal(18,4);default:0"`
-	Status      string    `json:"status" gorm:"size:20;default:pending;comment:pending待审核 completed已完成"`
-	OperatorID  uint      `json:"operatorId" gorm:"index"`
-	Remark      string    `json:"remark" gorm:"size:500"`
+	CustomerID  uint                `json:"customerId" gorm:"index;not null"`
+	WarehouseID uint                `json:"warehouseId" gorm:"index;not null"`
+	OrderID     uint                `json:"orderId" gorm:"index;default:0"`
+	BillNo      string              `json:"billNo" gorm:"size:64;index;not null"`
+	BillDate    time.Time           `json:"billDate" gorm:"type:date"`
+	Amount      float64             `json:"amount" gorm:"type:decimal(18,4);default:0"`
+	Discount    float64             `json:"discount" gorm:"type:decimal(18,4);default:0"`
+	TotalAmount float64             `json:"totalAmount" gorm:"type:decimal(18,4);default:0"`
+	PaidAmount  float64             `json:"paidAmount" gorm:"type:decimal(18,4);default:0"`
+	Status      string              `json:"status" gorm:"size:20;default:pending;comment:pending待审核 completed已完成"`
+	OperatorID  uint                `json:"operatorId" gorm:"index"`
+	Remark      string              `json:"remark" gorm:"size:500"`
 	Items       []SalesOutStockItem `json:"items" gorm:"foreignKey:OutStockID"`
 }
 
@@ -555,45 +645,45 @@ type SalesOutStockItem struct {
 // SalesReturn 销售退货单
 type SalesReturn struct {
 	BaseModelWithCompany
-	CustomerID  uint      `json:"customerId" gorm:"index;not null"`
-	WarehouseID uint      `json:"warehouseId" gorm:"index;not null"`
-	OutStockID  uint      `json:"outStockId" gorm:"index;default:0"`
-	BillNo      string    `json:"billNo" gorm:"size:64;index;not null"`
-	BillDate    time.Time `json:"billDate" gorm:"type:date"`
-	Amount      float64   `json:"amount" gorm:"type:decimal(18,4);default:0"`
-	TotalAmount float64   `json:"totalAmount" gorm:"type:decimal(18,4);default:0"`
-	Status      string    `json:"status" gorm:"size:20;default:pending;comment:pending待审核 completed已完成"`
-	OperatorID  uint      `json:"operatorId" gorm:"index"`
-	Remark      string    `json:"remark" gorm:"size:500"`
+	CustomerID  uint              `json:"customerId" gorm:"index;not null"`
+	WarehouseID uint              `json:"warehouseId" gorm:"index;not null"`
+	OutStockID  uint              `json:"outStockId" gorm:"index;default:0"`
+	BillNo      string            `json:"billNo" gorm:"size:64;index;not null"`
+	BillDate    time.Time         `json:"billDate" gorm:"type:date"`
+	Amount      float64           `json:"amount" gorm:"type:decimal(18,4);default:0"`
+	TotalAmount float64           `json:"totalAmount" gorm:"type:decimal(18,4);default:0"`
+	Status      string            `json:"status" gorm:"size:20;default:pending;comment:pending待审核 completed已完成"`
+	OperatorID  uint              `json:"operatorId" gorm:"index"`
+	Remark      string            `json:"remark" gorm:"size:500"`
 	Items       []SalesReturnItem `json:"items" gorm:"foreignKey:ReturnID"`
 }
 
 // SalesReturnItem 销售退货明细
 type SalesReturnItem struct {
 	BaseModel
-	ReturnID      uint    `json:"returnId" gorm:"index;not null"`
-	OutStockItemID uint   `json:"outStockItemId" gorm:"index;default:0"`
-	ProductID     uint    `json:"productId" gorm:"index;not null"`
-	UnitID        uint    `json:"unitId" gorm:"index;default:0"`
-	Quantity      float64 `json:"quantity" gorm:"type:decimal(18,4);default:0"`
-	Price         float64 `json:"price" gorm:"type:decimal(18,4);default:0"`
-	Amount        float64 `json:"amount" gorm:"type:decimal(18,4);default:0"`
-	Remark        string  `json:"remark" gorm:"size:255"`
+	ReturnID       uint    `json:"returnId" gorm:"index;not null"`
+	OutStockItemID uint    `json:"outStockItemId" gorm:"index;default:0"`
+	ProductID      uint    `json:"productId" gorm:"index;not null"`
+	UnitID         uint    `json:"unitId" gorm:"index;default:0"`
+	Quantity       float64 `json:"quantity" gorm:"type:decimal(18,4);default:0"`
+	Price          float64 `json:"price" gorm:"type:decimal(18,4);default:0"`
+	Amount         float64 `json:"amount" gorm:"type:decimal(18,4);default:0"`
+	Remark         string  `json:"remark" gorm:"size:255"`
 }
 
 // SalesReceipt 销售收款单
 type SalesReceipt struct {
 	BaseModelWithCompany
-	CustomerID  uint      `json:"customerId" gorm:"index;not null"`
-	AccountID   uint      `json:"accountId" gorm:"index;not null"`
-	BillNo      string    `json:"billNo" gorm:"size:64;index;not null"`
-	BillDate    time.Time `json:"billDate" gorm:"type:date"`
-	Amount      float64   `json:"amount" gorm:"type:decimal(18,4);default:0"`
-	Discount    float64   `json:"discount" gorm:"type:decimal(18,4);default:0"`
-	TotalAmount float64   `json:"totalAmount" gorm:"type:decimal(18,4);default:0"`
-	Status      string    `json:"status" gorm:"size:20;default:pending;comment:pending待审核 completed已完成"`
-	OperatorID  uint      `json:"operatorId" gorm:"index"`
-	Remark      string    `json:"remark" gorm:"size:500"`
+	CustomerID  uint               `json:"customerId" gorm:"index;not null"`
+	AccountID   uint               `json:"accountId" gorm:"index;not null"`
+	BillNo      string             `json:"billNo" gorm:"size:64;index;not null"`
+	BillDate    time.Time          `json:"billDate" gorm:"type:date"`
+	Amount      float64            `json:"amount" gorm:"type:decimal(18,4);default:0"`
+	Discount    float64            `json:"discount" gorm:"type:decimal(18,4);default:0"`
+	TotalAmount float64            `json:"totalAmount" gorm:"type:decimal(18,4);default:0"`
+	Status      string             `json:"status" gorm:"size:20;default:pending;comment:pending待审核 completed已完成"`
+	OperatorID  uint               `json:"operatorId" gorm:"index"`
+	Remark      string             `json:"remark" gorm:"size:500"`
 	Items       []SalesReceiptItem `json:"items" gorm:"foreignKey:ReceiptID"`
 }
 
@@ -613,54 +703,54 @@ type SalesReceiptItem struct {
 // InventoryCheck 库存盘点单
 type InventoryCheck struct {
 	BaseModelWithCompany
-	WarehouseID uint      `json:"warehouseId" gorm:"index;not null"`
-	BillNo      string    `json:"billNo" gorm:"size:64;index;not null"`
-	BillDate    time.Time `json:"billDate" gorm:"type:date"`
-	Status      string    `json:"status" gorm:"size:20;default:pending;comment:pending待审核 completed已完成"`
-	OperatorID  uint      `json:"operatorId" gorm:"index"`
-	Remark      string    `json:"remark" gorm:"size:500"`
+	WarehouseID uint                 `json:"warehouseId" gorm:"index;not null"`
+	BillNo      string               `json:"billNo" gorm:"size:64;index;not null"`
+	BillDate    time.Time            `json:"billDate" gorm:"type:date"`
+	Status      string               `json:"status" gorm:"size:20;default:pending;comment:pending待审核 completed已完成"`
+	OperatorID  uint                 `json:"operatorId" gorm:"index"`
+	Remark      string               `json:"remark" gorm:"size:500"`
 	Items       []InventoryCheckItem `json:"items" gorm:"foreignKey:CheckID"`
 }
 
 // InventoryCheckItem 库存盘点明细
 type InventoryCheckItem struct {
 	BaseModel
-	CheckID      uint    `json:"checkId" gorm:"index;not null"`
-	ProductID    uint    `json:"productId" gorm:"index;not null"`
-	PositionID   uint    `json:"positionId" gorm:"index;default:0"`
-	BookQty      float64 `json:"bookQty" gorm:"type:decimal(18,4);default:0"`
-	ActualQty    float64 `json:"actualQty" gorm:"type:decimal(18,4);default:0"`
-	DiffQty      float64 `json:"diffQty" gorm:"type:decimal(18,4);default:0"`
-	Price        float64 `json:"price" gorm:"type:decimal(18,4);default:0"`
-	Amount       float64 `json:"amount" gorm:"type:decimal(18,4);default:0"`
-	Remark       string  `json:"remark" gorm:"size:255"`
+	CheckID    uint    `json:"checkId" gorm:"index;not null"`
+	ProductID  uint    `json:"productId" gorm:"index;not null"`
+	PositionID uint    `json:"positionId" gorm:"index;default:0"`
+	BookQty    float64 `json:"bookQty" gorm:"type:decimal(18,4);default:0"`
+	ActualQty  float64 `json:"actualQty" gorm:"type:decimal(18,4);default:0"`
+	DiffQty    float64 `json:"diffQty" gorm:"type:decimal(18,4);default:0"`
+	Price      float64 `json:"price" gorm:"type:decimal(18,4);default:0"`
+	Amount     float64 `json:"amount" gorm:"type:decimal(18,4);default:0"`
+	Remark     string  `json:"remark" gorm:"size:255"`
 }
 
 // InventoryTransfer 库存调拨单
 type InventoryTransfer struct {
 	BaseModelWithCompany
-	FromWarehouseID uint      `json:"fromWarehouseId" gorm:"index;not null"`
-	ToWarehouseID   uint      `json:"toWarehouseId" gorm:"index;not null"`
-	BillNo          string    `json:"billNo" gorm:"size:64;index;not null"`
-	BillDate        time.Time `json:"billDate" gorm:"type:date"`
-	Amount          float64   `json:"amount" gorm:"type:decimal(18,4);default:0"`
-	Status          string    `json:"status" gorm:"size:20;default:pending;comment:pending待审核 completed已完成"`
-	OperatorID      uint      `json:"operatorId" gorm:"index"`
-	Remark          string    `json:"remark" gorm:"size:500"`
+	FromWarehouseID uint                    `json:"fromWarehouseId" gorm:"index;not null"`
+	ToWarehouseID   uint                    `json:"toWarehouseId" gorm:"index;not null"`
+	BillNo          string                  `json:"billNo" gorm:"size:64;index;not null"`
+	BillDate        time.Time               `json:"billDate" gorm:"type:date"`
+	Amount          float64                 `json:"amount" gorm:"type:decimal(18,4);default:0"`
+	Status          string                  `json:"status" gorm:"size:20;default:pending;comment:pending待审核 completed已完成"`
+	OperatorID      uint                    `json:"operatorId" gorm:"index"`
+	Remark          string                  `json:"remark" gorm:"size:500"`
 	Items           []InventoryTransferItem `json:"items" gorm:"foreignKey:TransferID"`
 }
 
 // InventoryTransferItem 库存调拨明细
 type InventoryTransferItem struct {
 	BaseModel
-	TransferID   uint    `json:"transferId" gorm:"index;not null"`
-	ProductID    uint    `json:"productId" gorm:"index;not null"`
-	FromPositionID uint  `json:"fromPositionId" gorm:"index;default:0"`
-	ToPositionID uint    `json:"toPositionId" gorm:"index;default:0"`
-	Quantity     float64 `json:"quantity" gorm:"type:decimal(18,4);default:0"`
-	Price        float64 `json:"price" gorm:"type:decimal(18,4);default:0"`
-	Amount       float64 `json:"amount" gorm:"type:decimal(18,4);default:0"`
-	Remark       string  `json:"remark" gorm:"size:255"`
+	TransferID     uint    `json:"transferId" gorm:"index;not null"`
+	ProductID      uint    `json:"productId" gorm:"index;not null"`
+	FromPositionID uint    `json:"fromPositionId" gorm:"index;default:0"`
+	ToPositionID   uint    `json:"toPositionId" gorm:"index;default:0"`
+	Quantity       float64 `json:"quantity" gorm:"type:decimal(18,4);default:0"`
+	Price          float64 `json:"price" gorm:"type:decimal(18,4);default:0"`
+	Amount         float64 `json:"amount" gorm:"type:decimal(18,4);default:0"`
+	Remark         string  `json:"remark" gorm:"size:255"`
 }
 
 // InventoryWarning 库存预警
@@ -701,14 +791,14 @@ type MallCart struct {
 // MallOrder 商城订单
 type MallOrder struct {
 	BaseModelWithCompany
-	CustomerID  uint      `json:"customerId" gorm:"index;not null"`
-	OrderNo     string    `json:"orderNo" gorm:"size:64;index;not null"`
-	OrderDate   time.Time `json:"orderDate" gorm:"type:date"`
-	Amount      float64   `json:"amount" gorm:"type:decimal(18,4);default:0"`
-	TotalAmount float64   `json:"totalAmount" gorm:"type:decimal(18,4);default:0"`
-	Status      string    `json:"status" gorm:"size:20;default:pending;comment:pending待处理 paid已付款 shipped已发货 completed已完成 cancelled已取消"`
-	OperatorID  uint      `json:"operatorId" gorm:"index"`
-	Remark      string    `json:"remark" gorm:"size:500"`
+	CustomerID  uint            `json:"customerId" gorm:"index;not null"`
+	OrderNo     string          `json:"orderNo" gorm:"size:64;index;not null"`
+	OrderDate   time.Time       `json:"orderDate" gorm:"type:date"`
+	Amount      float64         `json:"amount" gorm:"type:decimal(18,4);default:0"`
+	TotalAmount float64         `json:"totalAmount" gorm:"type:decimal(18,4);default:0"`
+	Status      string          `json:"status" gorm:"size:20;default:pending;comment:pending待处理 paid已付款 shipped已发货 completed已完成 cancelled已取消"`
+	OperatorID  uint            `json:"operatorId" gorm:"index"`
+	Remark      string          `json:"remark" gorm:"size:500"`
 	Items       []MallOrderItem `json:"items" gorm:"foreignKey:OrderID"`
 }
 
@@ -740,30 +830,30 @@ type FollowUp struct {
 // Opportunity 商机
 type Opportunity struct {
 	BaseModelWithCompany
-	CustomerID  uint    `json:"customerId" gorm:"index;not null"`
-	Name        string  `json:"name" gorm:"size:128;not null"`
-	Amount      float64 `json:"amount" gorm:"type:decimal(18,4);default:0"`
-	Stage       string  `json:"stage" gorm:"size:20;default:lead;comment:lead线索 qualification资格审查 proposal方案 negotiation谈判 closed成交 lost丢失"`
-	Probability float64 `json:"probability" gorm:"type:decimal(5,2);default:0"`
+	CustomerID   uint      `json:"customerId" gorm:"index;not null"`
+	Name         string    `json:"name" gorm:"size:128;not null"`
+	Amount       float64   `json:"amount" gorm:"type:decimal(18,4);default:0"`
+	Stage        string    `json:"stage" gorm:"size:20;default:lead;comment:lead线索 qualification资格审查 proposal方案 negotiation谈判 closed成交 lost丢失"`
+	Probability  float64   `json:"probability" gorm:"type:decimal(5,2);default:0"`
 	ExpectedDate time.Time `json:"expectedDate" gorm:"type:date"`
-	OperatorID  uint    `json:"operatorId" gorm:"index"`
-	Remark      string  `json:"remark" gorm:"size:500"`
-	Status      int8    `json:"status" gorm:"default:1"`
+	OperatorID   uint      `json:"operatorId" gorm:"index"`
+	Remark       string    `json:"remark" gorm:"size:500"`
+	Status       int8      `json:"status" gorm:"default:1"`
 }
 
 // Contract 合同
 type Contract struct {
 	BaseModelWithCompany
-	CustomerID   uint      `json:"customerId" gorm:"index;not null"`
-	OpportunityID uint     `json:"opportunityId" gorm:"index;default:0"`
-	ContractNo   string    `json:"contractNo" gorm:"size:64;index;not null"`
-	ContractDate time.Time `json:"contractDate" gorm:"type:date"`
-	Amount       float64   `json:"amount" gorm:"type:decimal(18,4);default:0"`
-	StartDate    time.Time `json:"startDate" gorm:"type:date"`
-	EndDate      time.Time `json:"endDate" gorm:"type:date"`
-	Status       string    `json:"status" gorm:"size:20;default:draft;comment:draft草稿 active生效 completed完成 terminated终止"`
-	OperatorID   uint      `json:"operatorId" gorm:"index"`
-	Remark       string    `json:"remark" gorm:"size:500"`
+	CustomerID    uint      `json:"customerId" gorm:"index;not null"`
+	OpportunityID uint      `json:"opportunityId" gorm:"index;default:0"`
+	ContractNo    string    `json:"contractNo" gorm:"size:64;index;not null"`
+	ContractDate  time.Time `json:"contractDate" gorm:"type:date"`
+	Amount        float64   `json:"amount" gorm:"type:decimal(18,4);default:0"`
+	StartDate     time.Time `json:"startDate" gorm:"type:date"`
+	EndDate       time.Time `json:"endDate" gorm:"type:date"`
+	Status        string    `json:"status" gorm:"size:20;default:draft;comment:draft草稿 active生效 completed完成 terminated终止"`
+	OperatorID    uint      `json:"operatorId" gorm:"index"`
+	Remark        string    `json:"remark" gorm:"size:500"`
 }
 
 // ==================== 审批模块 ====================
@@ -790,6 +880,15 @@ type ApprovalRecord struct {
 	Comment      string    `json:"comment" gorm:"size:500"`
 	ApproveDate  time.Time `json:"approveDate" gorm:"type:date"`
 	Status       int8      `json:"status" gorm:"default:1"`
+}
+
+// ==================== 公司级设置 ====================
+
+// CompanySetting 公司级键值设置
+type CompanySetting struct {
+	BaseModelWithCompany
+	Key   string `json:"key" gorm:"size:64;not null;uniqueIndex:idx_company_setting"`
+	Value string `json:"value" gorm:"size:2000"`
 }
 
 // ==================== 报表模块（使用查询实现） ====================

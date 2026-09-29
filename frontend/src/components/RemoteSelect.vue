@@ -3,6 +3,8 @@
     v-model="innerValue"
     :placeholder="placeholder"
     :disabled="disabled"
+    :multiple="multiple"
+    :collapse-tags="multiple"
     filterable
     remote
     :remote-method="handleSearch"
@@ -23,13 +25,16 @@
 import { ref, watch } from 'vue'
 import api from '@/api/client'
 
+type SelectValue = number | string
+
 interface Props {
-  modelValue: number | string | undefined
+  modelValue: SelectValue | SelectValue[] | undefined
   apiUrl: string
   labelKey?: string
   valueKey?: string
   placeholder?: string
   disabled?: boolean
+  multiple?: boolean
   params?: Record<string, any>
 }
 
@@ -38,14 +43,17 @@ const props = withDefaults(defineProps<Props>(), {
   valueKey: 'id',
   placeholder: '请选择',
   disabled: false,
+  multiple: false,
 })
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', val: number | string | undefined): void
+  (e: 'update:modelValue', val: SelectValue | SelectValue[] | undefined): void
 }>()
 
-const innerValue = ref(props.modelValue)
-const options = ref<{ label: string; value: number | string }[]>([])
+const innerValue = ref<SelectValue | SelectValue[] | undefined>(
+  props.multiple ? (Array.isArray(props.modelValue) ? props.modelValue : []) : props.modelValue
+)
+const options = ref<{ label: string; value: SelectValue }[]>([])
 const loading = ref(false)
 
 watch(() => props.modelValue, (val) => {

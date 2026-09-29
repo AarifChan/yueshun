@@ -1,7 +1,10 @@
 package api
 
 import (
+	"os"
+
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"gorm.io/gorm"
@@ -11,7 +14,7 @@ import (
 )
 
 // SetupRouter 配置路由
-func SetupRouter(db *gorm.DB, jwtCfg *middleware.JWTConfig, wecomCfg *handler.WeComConfig) *gin.Engine {
+func SetupRouter(db *gorm.DB, jwtCfg *middleware.JWTConfig, wecomCfg *handler.WeComConfig, uploadDir string) *gin.Engine {
 	// 初始化 JWT
 	middleware.InitJWT(jwtCfg)
 
@@ -24,9 +27,13 @@ func SetupRouter(db *gorm.DB, jwtCfg *middleware.JWTConfig, wecomCfg *handler.We
 	permHandler := handler.NewPermissionHandler(db)
 	productHandler := handler.NewProductHandler(db)
 	productSettingHandler := handler.NewProductSettingHandler(db)
+	saleScopeHandler := handler.NewSaleScopeHandler(db)
+	settingHandler := handler.NewSettingHandler(db)
 	customerHandler := handler.NewCustomerHandler(db)
+	supplierHandler := handler.NewSupplierHandler(db)
 	warehouseHandler := handler.NewWarehouseHandler(db)
 	priceHandler := handler.NewPriceHandler(db)
+	priceManageHandler := handler.NewPriceManageHandler(db)
 	purchaseHandler := handler.NewPurchaseHandler(db)
 	saleHandler := handler.NewSaleHandler(db)
 	inventoryHandler := handler.NewInventoryHandler(db)
@@ -34,11 +41,18 @@ func SetupRouter(db *gorm.DB, jwtCfg *middleware.JWTConfig, wecomCfg *handler.We
 	crmHandler := handler.NewCRMHandler(db)
 	approvalHandler := handler.NewApprovalHandler(db)
 	statsHandler := handler.NewStatsHandler(db)
+	uploadHandler := handler.NewUploadHandler(uploadDir)
 
 	router := gin.New()
 	router.Use(middleware.CORSMiddleware())
 	router.Use(middleware.LoggerMiddleware())
 	router.Use(gin.Recovery())
+
+	if err := os.MkdirAll(uploadDir, 0755); err != nil {
+		log.Warn().Err(err).Str("dir", uploadDir).Msg("create upload dir failed, static serving disabled")
+	} else {
+		router.Static("/uploads", uploadDir)
+	}
 
 	// 健康检查
 	router.GET("/health", func(c *gin.Context) {
@@ -68,15 +82,19 @@ func SetupRouter(db *gorm.DB, jwtCfg *middleware.JWTConfig, wecomCfg *handler.We
 			// 商品资料
 			productHandler.RegisterRoutes(authorized)
 			productSettingHandler.RegisterRoutes(authorized)
+			saleScopeHandler.RegisterRoutes(authorized)
+			settingHandler.RegisterRoutes(authorized)
 
 			// 客户/供应商
 			customerHandler.RegisterRoutes(authorized)
+			supplierHandler.RegisterRoutes(authorized)
 
 			// 仓库/资金
 			warehouseHandler.RegisterRoutes(authorized)
 
 			// 价格体系
 			priceHandler.RegisterRoutes(authorized)
+			priceManageHandler.RegisterRoutes(authorized)
 
 			// 库存模块
 			inventoryHandler.RegisterRoutes(authorized)
@@ -98,6 +116,9 @@ func SetupRouter(db *gorm.DB, jwtCfg *middleware.JWTConfig, wecomCfg *handler.We
 
 			// 数据统计
 			statsHandler.RegisterRoutes(authorized)
+
+			// 文件上传
+			uploadHandler.RegisterRoutes(authorized)
 
 			// 占位
 			authorized.GET("/ping", func(c *gin.Context) {

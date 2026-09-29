@@ -42,6 +42,12 @@ func (h *CustomerHandler) RegisterRoutes(r *gin.RouterGroup) {
 		customer.PUT("/levels/:id", h.UpdateLevel)
 		customer.DELETE("/levels/:id", h.DeleteLevel)
 
+		// 客户标签
+		customer.GET("/tags", h.ListCustomerTags)
+		customer.POST("/tags", h.CreateCustomerTag)
+		customer.PUT("/tags/:id", h.UpdateCustomerTag)
+		customer.DELETE("/tags/:id", h.DeleteCustomerTag)
+
 		// 客户
 		customer.GET("", h.ListCustomers)
 		customer.POST("", h.CreateCustomer)
@@ -848,4 +854,102 @@ func (h *CustomerHandler) UpdateCustomerStatus(c *gin.Context) {
 		return
 	}
 	response.OkWithMessage(c, "更新成功", nil)
+}
+
+// ==================== 客户标签 ====================
+
+func (h *CustomerHandler) ListCustomerTags(c *gin.Context) {
+	companyID := middleware.GetCompanyID(c)
+	if companyID == 0 {
+		response.Unauthorized(c, "未登录")
+		return
+	}
+	var list []model.CustomerTag
+	query := h.db.Where("company_id = ?", companyID)
+	if keyword := c.Query("keyword"); keyword != "" {
+		query = query.Where("name LIKE ?", "%"+keyword+"%")
+	}
+	if err := query.Order("created_at DESC").Find(&list).Error; err != nil {
+		log.Error().Err(err).Msg("list customer tags failed")
+		response.ServerError(c, "查询失败")
+		return
+	}
+	if list == nil {
+		list = []model.CustomerTag{}
+	}
+	response.Ok(c, list)
+}
+
+func (h *CustomerHandler) CreateCustomerTag(c *gin.Context) {
+	var req struct {
+		Name   string `json:"name" binding:"required,max=64"`
+		Status int8   `json:"status" binding:"oneof=0 1"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "请求参数错误")
+		return
+	}
+	companyID := middleware.GetCompanyID(c)
+	if companyID == 0 {
+		response.Unauthorized(c, "未登录")
+		return
+	}
+	tag := model.CustomerTag{
+		BaseModelWithCompany: model.BaseModelWithCompany{CompanyID: companyID},
+		Name:                 req.Name,
+		Status:               req.Status,
+	}
+	if err := h.db.Create(&tag).Error; err != nil {
+		log.Error().Err(err).Msg("create customer tag failed")
+		response.ServerError(c, "创建失败")
+		return
+	}
+	response.Ok(c, tag)
+}
+
+func (h *CustomerHandler) UpdateCustomerTag(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "ID 格式错误")
+		return
+	}
+	var req struct {
+		Name   string `json:"name" binding:"max=64"`
+		Status int8   `json:"status" binding:"oneof=0 1"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "请求参数错误")
+		return
+	}
+	companyID := middleware.GetCompanyID(c)
+	var tag model.CustomerTag
+	if err := h.db.Where("id = ? AND company_id = ?", id, companyID).First(&tag).Error; err != nil {
+		response.NotFound(c, "标签不存在")
+		return
+	}
+	if req.Name != "" {
+		tag.Name = req.Name
+	}
+	tag.Status = req.Status
+	if err := h.db.Save(&tag).Error; err != nil {
+		log.Error().Err(err).Msg("update customer tag failed")
+		response.ServerError(c, "更新失败")
+		return
+	}
+	response.Ok(c, tag)
+}
+
+func (h *CustomerHandler) DeleteCustomerTag(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "ID 格式错误")
+		return
+	}
+	companyID := middleware.GetCompanyID(c)
+	if err := h.db.Where("id = ? AND company_id = ?", id, companyID).Delete(&model.CustomerTag{}).Error; err != nil {
+		log.Error().Err(err).Msg("delete customer tag failed")
+		response.ServerError(c, "删除失败")
+		return
+	}
+	response.OkWithMessage(c, "删除成功", nil)
 }

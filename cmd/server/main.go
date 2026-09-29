@@ -36,6 +36,9 @@ type Config struct {
 	Database database.Config `mapstructure:"database"`
 	Redis    redis.Config  `mapstructure:"redis"`
 	WeCom    handler.WeComConfig `mapstructure:"wecom"`
+	Upload   struct {
+		Dir string `mapstructure:"dir"`
+	} `mapstructure:"upload"`
 	Log      struct {
 		Level  string `mapstructure:"level"`
 		Format string `mapstructure:"format"`
@@ -94,7 +97,11 @@ func main() {
 	}
 
 	// 配置路由
-	router := api.SetupRouter(db, jwtCfg, &cfg.WeCom)
+	uploadDir := cfg.Upload.Dir
+	if uploadDir == "" {
+		uploadDir = "./uploads"
+	}
+	router := api.SetupRouter(db, jwtCfg, &cfg.WeCom, uploadDir)
 
 	// 启动服务
 	addr := fmt.Sprintf(":%d", cfg.App.Port)
@@ -159,13 +166,18 @@ func autoMigrate(db *gorm.DB) error {
 		&model.ProductBarcode{},
 		&model.GoodsUnit{},
 		&model.ProductSpec{},
+		&model.ProductSpecItem{},
 		&model.ProductTag{},
+		&model.ProductTagRelation{},
 		&model.ProductSalesScope{},
+		&model.ProductSaleRule{},
 		// 客户/供应商
 		&model.CustomerCategory{},
 		&model.Region{},
 		&model.CustomerLevel{},
+		&model.CustomerTag{},
 		&model.Customer{},
+		&model.Supplier{},
 		// 仓库/资金
 		&model.Warehouse{},
 		&model.WarehousePosition{},
@@ -213,6 +225,8 @@ func autoMigrate(db *gorm.DB) error {
 		// 审批模块
 		&model.ApprovalProcess{},
 		&model.ApprovalRecord{},
+		// 公司级设置
+		&model.CompanySetting{},
 	); err != nil {
 		return err
 	}
@@ -224,6 +238,14 @@ func autoMigrate(db *gorm.DB) error {
 		return err
 	}
 	if err := db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS uniq_stock_wh_product ON stocks (company_id, warehouse_id, product_id)`).Error; err != nil {
+		return err
+	}
+
+	// company_settings 表同理，唯一索引需包含 company_id。
+	if err := db.Exec(`DROP INDEX IF EXISTS idx_company_setting`).Error; err != nil {
+		return err
+	}
+	if err := db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_company_setting ON company_settings (company_id, key)`).Error; err != nil {
 		return err
 	}
 	return nil

@@ -1,61 +1,222 @@
 <template>
   <div class="page">
+    <div class="page-header">
+      <span class="page-title">商品单位</span>
+      <el-button type="primary" :icon="Plus" @click="openCreate">新增</el-button>
+    </div>
     <el-card>
-      <template #header>
-        <div class="card-header"><span>商品单位</span><el-button type="primary" @click="openCreate">新增单位</el-button></div>
-      </template>
-      <el-form :model="searchForm" inline class="search-form">
-        <el-form-item label="关键词"><el-input v-model="searchForm.keyword" placeholder="名称/编码" clearable /></el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="状态" clearable>
-            <el-option label="启用" :value="1" /><el-option label="禁用" :value="0" />
-          </el-select>
-        </el-form-item>
-        <el-form-item><el-button type="primary" @click="handleSearch">搜索</el-button><el-button @click="handleReset">重置</el-button></el-form-item>
-      </el-form>
-      <el-table :data="list" v-loading="loading" border stripe>
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="name" label="名称" min-width="150" />
-        <el-table-column prop="code" label="编码" min-width="120" />
-        <el-table-column prop="status" label="状态" width="100">
-          <template #default="{ row }"><el-tag :type="row.status === 1 ? 'success' : 'danger'">{{ row.status === 1 ? '启用' : '禁用' }}</el-tag></template>
-        </el-table-column>
-        <el-table-column label="操作" width="180" fixed="right">
-          <template #default="{ row }">
-            <el-button type="primary" size="small" @click="openEdit(row)">编辑</el-button>
-            <el-button type="danger" size="small" @click="handleDelete(row)">删除</el-button>
+      <div class="filter-bar">
+        <el-select
+          v-model="storageType"
+          placeholder="默认存放类型"
+          clearable
+          class="filter-select"
+          @change="fetchList"
+        >
+          <el-option label="散货" :value="1" />
+          <el-option label="整件" :value="2" />
+        </el-select>
+      </div>
+      <el-table ref="tableRef" :data="list" v-loading="loading" row-key="id" border>
+        <el-table-column label="排序" width="60" align="center">
+          <template #default>
+            <el-icon class="drag-handle" :class="{ disabled: isFiltered }"><Rank /></el-icon>
           </template>
         </el-table-column>
+        <el-table-column type="selection" width="46" align="center" />
+        <el-table-column label="操作" width="70" align="center">
+          <template #default="{ row }">
+            <el-dropdown trigger="click" @command="(cmd: string) => handleCommand(cmd, row)">
+              <el-button text :icon="More" />
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="edit">编辑</el-dropdown-item>
+                  <el-dropdown-item command="delete"><span class="danger-text">删除</span></el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </template>
+        </el-table-column>
+        <el-table-column prop="name" label="商品单位" min-width="180" />
+        <el-table-column label="默认存放类型" min-width="140">
+          <template #default="{ row }">{{ row.storageType === 2 ? '整件' : '散货' }}</template>
+        </el-table-column>
       </el-table>
-      <el-pagination v-model:current-page="pagination.page" v-model:page-size="pagination.pageSize" :total="total" :page-sizes="[10,20,50]" layout="total, sizes, prev, pager, next" @size-change="handleSizeChange" @current-change="handleCurrentChange" class="pagination" />
     </el-card>
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">
-      <el-form :model="form" label-width="80px">
-        <el-form-item label="名称" required><el-input v-model="form.name" /></el-form-item>
-        <el-form-item label="编码"><el-input v-model="form.code" /></el-form-item>
-        <el-form-item label="状态"><el-switch v-model="form.status" :active-value="1" :inactive-value="0" /></el-form-item>
+
+    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑单位' : '新增单位'" width="480px" destroy-on-close>
+      <el-form ref="formRef" :model="form" :rules="formRules" label-width="100px">
+        <el-form-item label="单位名称" prop="name">
+          <el-input v-model="form.name" placeholder="单位名称" maxlength="4" show-word-limit />
+        </el-form-item>
+        <el-form-item label="默认存放类型" prop="storageType">
+          <el-radio-group v-model="form.storageType">
+            <el-radio :value="1">散货</el-radio>
+            <el-radio :value="2">整件</el-radio>
+          </el-radio-group>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit">确定</el-button>
+        <el-button type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useCrud } from '@/composables/useCrud'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
+import { More, Plus, Rank } from '@element-plus/icons-vue'
+import Sortable from 'sortablejs'
+import { createUnit, deleteUnit, fetchUnits, sortUnits, updateUnit, type GoodsUnit } from '@/api/unit'
 
-interface GoodsUnit { id: number; name: string; code: string; status: number }
+const list = ref<GoodsUnit[]>([])
+const loading = ref(false)
+const tableRef = ref()
+const storageType = ref<number | undefined>()
+let sortable: Sortable | null = null
 
-const crud = useCrud<GoodsUnit>({ baseUrl: '/api/v1/product-settings/units', defaultForm: () => ({ status: 1 }) })
-const { list, total, loading, dialogVisible, dialogTitle, form, searchForm, pagination, fetchList, openCreate, openEdit, handleSubmit, handleDelete, handleSearch, handleReset, handleSizeChange, handleCurrentChange } = crud
-fetchList()
+const isFiltered = computed(() => storageType.value !== undefined && storageType.value !== null)
+
+function ok(res: any) {
+  return res.data.code === 0 || res.data.code === 200
+}
+
+function destroySortable() {
+  sortable?.destroy()
+  sortable = null
+}
+
+function initSortable() {
+  destroySortable()
+  if (isFiltered.value) return
+  const tbody = tableRef.value?.$el?.querySelector('.el-table__body tbody')
+  if (!tbody) return
+  sortable = Sortable.create(tbody, {
+    handle: '.drag-handle',
+    animation: 150,
+    onEnd: onDragEnd,
+  })
+}
+
+async function fetchList() {
+  loading.value = true
+  try {
+    const params: { storageType?: number } = {}
+    if (isFiltered.value) params.storageType = storageType.value
+    const res = await fetchUnits(params)
+    if (ok(res)) {
+      list.value = res.data.data?.list || []
+      await nextTick()
+      initSortable()
+    } else {
+      ElMessage.error(res.data.message || '获取单位失败')
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
+async function onDragEnd(evt: Sortable.SortableEvent) {
+  const { oldIndex, newIndex } = evt
+  if (oldIndex === undefined || newIndex === undefined || oldIndex === newIndex) return
+  const rows = [...list.value]
+  const [moved] = rows.splice(oldIndex, 1)
+  if (!moved) {
+    fetchList()
+    return
+  }
+  rows.splice(newIndex, 0, moved)
+  const items = rows.map((r, i) => ({ id: r.id, sort: i }))
+  try {
+    const res = await sortUnits(items)
+    if (ok(res)) {
+      ElMessage.success('排序成功')
+    } else {
+      ElMessage.error(res.data.message || '排序失败')
+    }
+  } finally {
+    fetchList()
+  }
+}
+
+const dialogVisible = ref(false)
+const isEdit = ref(false)
+const currentId = ref<number | null>(null)
+const submitting = ref(false)
+const formRef = ref<FormInstance>()
+const form = reactive({ name: '', storageType: 1 })
+const formRules = {
+  name: [{ required: true, message: '请输入单位名称', trigger: 'blur' }],
+  storageType: [{ required: true, message: '请选择默认存放类型', trigger: 'change' }],
+}
+
+function openCreate() {
+  Object.assign(form, { name: '', storageType: 1 })
+  isEdit.value = false
+  currentId.value = null
+  dialogVisible.value = true
+}
+
+function openEdit(row: GoodsUnit) {
+  Object.assign(form, { name: row.name, storageType: row.storageType || 1 })
+  isEdit.value = true
+  currentId.value = row.id
+  dialogVisible.value = true
+}
+
+function handleCommand(cmd: string, row: GoodsUnit) {
+  if (cmd === 'edit') openEdit(row)
+  else if (cmd === 'delete') handleDelete(row)
+}
+
+async function handleSubmit() {
+  await formRef.value?.validate()
+  submitting.value = true
+  try {
+    const payload = { name: form.name, sort: 0, status: 1, storageType: form.storageType }
+    const res = isEdit.value && currentId.value !== null
+      ? await updateUnit(currentId.value, payload)
+      : await createUnit(payload)
+    if (ok(res)) {
+      ElMessage.success(isEdit.value ? '编辑成功' : '新增成功')
+      dialogVisible.value = false
+      fetchList()
+    } else {
+      ElMessage.error(res.data.message || '操作失败')
+    }
+  } finally {
+    submitting.value = false
+  }
+}
+
+async function handleDelete(row: GoodsUnit) {
+  try {
+    await ElMessageBox.confirm(`确认删除单位“${row.name}”？`, '提示', { type: 'warning' })
+  } catch {
+    return
+  }
+  const res = await deleteUnit(row.id)
+  if (ok(res)) {
+    ElMessage.success('删除成功')
+    fetchList()
+  } else {
+    ElMessage.error(res.data.message || '删除失败')
+  }
+}
+
+onMounted(fetchList)
+onBeforeUnmount(destroySortable)
 </script>
 
 <style scoped>
 .page { padding: 20px; }
-.card-header { display: flex; justify-content: space-between; align-items: center; }
-.search-form { margin-bottom: 16px; }
-.pagination { margin-top: 16px; justify-content: flex-end; }
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.page-title { font-size: 18px; font-weight: 600; }
+.filter-bar { margin-bottom: 16px; }
+.filter-select { width: 160px; }
+.drag-handle { cursor: move; color: #909399; }
+.drag-handle.disabled { cursor: not-allowed; opacity: 0.4; }
+.danger-text { color: var(--el-color-danger); }
 </style>

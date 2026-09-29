@@ -55,3 +55,12 @@ frontend/node_modules/
 
 # Swagger generated docs (if regenerated)
 # docs/swagger/
+
+# 上传文件
+uploads/
+
+# air 热更新
+tmp/
+
+# 运行进程
+*.pid
