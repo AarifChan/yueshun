@@ -932,7 +932,7 @@ type ProductResp struct {
 	TotalStock    float64  `json:"totalStock"`
 	SpecCount     int64    `json:"specCount"`
 	DefaultPrice  float64  `json:"defaultPrice"`
-	Tags          []string `json:"tags"`
+	Tags          []string `json:"tags" gorm:"-"`
 }
 
 func (h *ProductHandler) ListProducts(c *gin.Context) {
