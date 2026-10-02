@@ -1074,6 +1074,65 @@ const router = createRouter({
             },
           ],
         },
+        // BI
+        {
+          path: '',
+          name: 'GroupBI',
+          component: RouterView,
+          meta: {
+            title: 'BI',
+            icon: 'DataAnalysis',
+            mega: [
+              {
+                title: '商城经营分析', icon: 'Shop',
+                items: [
+                  { title: '客户商城上线', path: '/bi/mall-online' },
+                ],
+              },
+              {
+                title: '客户销售增长', icon: 'TrendCharts',
+                items: [
+                  { title: '新客跟踪', path: '/bi/new-customer-track' },
+                  { title: '老客增品', path: '/bi/old-customer-increment' },
+                  { title: '流失拉回', path: '/bi/lost-customer-back' },
+                  { title: '商品铺市', path: '/bi/product-distribution' },
+                ],
+              },
+            ],
+          },
+          children: [
+            {
+              path: 'bi/mall-online',
+              name: 'BIMallOnline',
+              component: () => import('@/views/bi/MallOnlineView.vue'),
+              meta: { title: '客户商城上线', icon: 'Shop' },
+            },
+            {
+              path: 'bi/new-customer-track',
+              name: 'BINewCustomerTrack',
+              component: () => import('@/views/bi/NewCustomerTrackView.vue'),
+              meta: { title: '新客跟踪', icon: 'User' },
+            },
+            {
+              path: 'bi/old-customer-increment',
+              name: 'BIOldCustomerIncrement',
+              component: () => import('@/views/bi/OldCustomerIncrementView.vue'),
+              meta: { title: '老客增品', icon: 'CirclePlus' },
+            },
+            {
+              path: 'bi/lost-customer-back',
+              name: 'BILostCustomerBack',
+              component: () => import('@/views/bi/LostCustomerBackView.vue'),
+              meta: { title: '流失拉回', icon: 'RefreshLeft' },
+            },
+            {
+              path: 'bi/product-distribution',
+              name: 'BIProductDistribution',
+              component: () => import('@/views/bi/ProductDistributionView.vue'),
+              meta: { title: '商品铺市', icon: 'MapLocation' },
+            },
+          ],
+        },
         // 审批管理
         {
           path: '',
