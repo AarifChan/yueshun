@@ -31,6 +31,7 @@ func (h *OtherInStockHandler) RegisterRoutes(r *gin.RouterGroup) {
 		g.POST("", h.Create)
 		g.GET("/export", h.ExportList)
 		g.GET("/export/items", h.ExportItems)
+		g.POST("/import", h.Import)
 		g.GET("/:id", h.Get)
 		g.PUT("/:id", h.Update)
 		g.DELETE("/:id", h.Delete)

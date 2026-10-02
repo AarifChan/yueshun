@@ -174,6 +174,66 @@ definitions:
 info:
   contact: {}
 paths:
+  /api/v1/assembly-orders:
+    get:
+      responses: {}
+      summary: 组装拆装单列表
+      tags:
+      - 库存
+    post:
+      responses: {}
+      summary: 新增组装拆装单
+      tags:
+      - 库存
+  /api/v1/assembly-orders/:id:
+    delete:
+      responses: {}
+      summary: 删除组装拆装单
+      tags:
+      - 库存
+    get:
+      responses: {}
+      summary: 组装拆装单详情
+      tags:
+      - 库存
+    put:
+      responses: {}
+      summary: 修改组装拆装单
+      tags:
+      - 库存
+  /api/v1/assembly-orders/:id/complete:
+    put:
+      responses: {}
+      summary: 组装拆装单过账
+      tags:
+      - 库存
+  /api/v1/assembly-templates:
+    get:
+      responses: {}
+      summary: 拆装模板列表
+      tags:
+      - 库存
+    post:
+      responses: {}
+      summary: 新增拆装模板
+      tags:
+      - 库存
+  /api/v1/assembly-templates/:id:
+    delete:
+      responses: {}
+      summary: 删除拆装模板
+      tags:
+      - 库存
+    get:
+      responses: {}
+      summary: 拆装模板详情
+      tags:
+      - 库存
+    put:
+      responses: {}
+      summary: 修改拆装模板
+      tags:
+      - 库存
   /api/v1/auth/login:
     post:
       consumes:
@@ -338,6 +398,382 @@ paths:
       summary: Web 企业微信扫码登录
       tags:
       - 认证
+  /api/v1/base-data/delivery-methods:
+    get:
+      responses: {}
+      summary: 发货方式列表
+      tags:
+      - 资料
+    post:
+      responses: {}
+      summary: 新增发货方式
+      tags:
+      - 资料
+  /api/v1/base-data/delivery-methods/:id:
+    delete:
+      responses: {}
+      summary: 删除发货方式
+      tags:
+      - 资料
+    put:
+      responses: {}
+      summary: 修改发货方式
+      tags:
+      - 资料
+  /api/v1/base-data/initial-accounts:
+    get:
+      responses: {}
+      summary: 现金银行期初列表
+      tags:
+      - 资料
+    put:
+      responses: {}
+      summary: 保存现金银行期初
+      tags:
+      - 资料
+  /api/v1/base-data/initial-balances:
+    get:
+      parameters:
+      - description: customer客户 supplier供应商
+        in: query
+        name: bizType
+        required: true
+        type: string
+      responses: {}
+      summary: 往来期初列表
+      tags:
+      - 资料
+    put:
+      responses: {}
+      summary: 保存往来期初
+      tags:
+      - 资料
+  /api/v1/base-data/initial-stocks:
+    get:
+      responses: {}
+      summary: 商品库存期初列表
+      tags:
+      - 资料
+    put:
+      responses: {}
+      summary: 保存商品库存期初
+      tags:
+      - 资料
+  /api/v1/base-data/logistics-companies:
+    get:
+      responses: {}
+      summary: 物流公司列表
+      tags:
+      - 资料
+    post:
+      responses: {}
+      summary: 新增物流公司
+      tags:
+      - 资料
+  /api/v1/base-data/logistics-companies/:id:
+    delete:
+      responses: {}
+      summary: 删除物流公司
+      tags:
+      - 资料
+    put:
+      responses: {}
+      summary: 修改物流公司
+      tags:
+      - 资料
+  /api/v1/base-data/materials:
+    get:
+      responses: {}
+      summary: 素材库列表
+      tags:
+      - 资料
+    post:
+      responses: {}
+      summary: 新增素材
+      tags:
+      - 资料
+  /api/v1/base-data/materials/:id:
+    delete:
+      responses: {}
+      summary: 删除素材
+      tags:
+      - 资料
+  /api/v1/base-data/stock-op-types:
+    get:
+      parameters:
+      - description: 名称/编号
+        in: query
+        name: keyword
+        type: string
+      - description: in入库 out出库
+        in: query
+        name: type
+        type: string
+      responses: {}
+      summary: 出入库类型列表
+      tags:
+      - 资料
+    post:
+      responses: {}
+      summary: 新增出入库类型
+      tags:
+      - 资料
+  /api/v1/base-data/stock-op-types/:id:
+    delete:
+      responses: {}
+      summary: 删除出入库类型
+      tags:
+      - 资料
+    put:
+      responses: {}
+      summary: 修改出入库类型
+      tags:
+      - 资料
+  /api/v1/bill-center:
+    get:
+      parameters:
+      - description: 单据类型
+        in: query
+        name: billType
+        type: string
+      - description: 单据编号
+        in: query
+        name: keyword
+        type: string
+      - description: 往来单位
+        in: query
+        name: counterpart
+        type: string
+      - description: 单据状态
+        in: query
+        name: status
+        type: string
+      - description: 支付状态
+        in: query
+        name: payStatus
+        type: string
+      - description: 只显示草稿单
+        in: query
+        name: onlyDraft
+        type: boolean
+      responses: {}
+      summary: 单据中心统一查询
+      tags:
+      - 单据中心
+  /api/v1/cost-adjusts:
+    get:
+      parameters:
+      - description: 单号
+        in: query
+        name: keyword
+        type: string
+      - description: 仓库
+        in: query
+        name: warehouseId
+        type: integer
+      - description: 状态
+        in: query
+        name: status
+        type: string
+      responses: {}
+      summary: 成本调价单列表
+      tags:
+      - 库存
+    post:
+      responses: {}
+      summary: 新增成本调价单
+      tags:
+      - 库存
+  /api/v1/cost-adjusts/:id:
+    delete:
+      responses: {}
+      summary: 删除成本调价单
+      tags:
+      - 库存
+    get:
+      responses: {}
+      summary: 成本调价单详情
+      tags:
+      - 库存
+    put:
+      responses: {}
+      summary: 修改成本调价单
+      tags:
+      - 库存
+  /api/v1/cost-adjusts/:id/complete:
+    put:
+      responses: {}
+      summary: 成本调价单过账
+      tags:
+      - 库存
+  /api/v1/inventory-reports/batch-stats:
+    get:
+      responses: {}
+      summary: 库存批号统计
+      tags:
+      - 库存报表
+  /api/v1/inventory-reports/batch-trace:
+    get:
+      responses: {}
+      summary: 批号跟踪详情
+      tags:
+      - 库存报表
+  /api/v1/inventory-reports/expiry-warning:
+    get:
+      parameters:
+      - description: 预警天数 默认90
+        in: query
+        name: days
+        type: integer
+      responses: {}
+      summary: 商品近效期预警
+      tags:
+      - 库存报表
+  /api/v1/inventory-reports/inout-flow:
+    get:
+      parameters:
+      - description: 单据类型
+        in: query
+        name: billType
+        type: string
+      responses: {}
+      summary: 商品出入库流水（行级，跨单据类型）
+      tags:
+      - 库存报表
+  /api/v1/inventory-reports/inout-summary:
+    get:
+      responses: {}
+      summary: 商品进销存汇总（期初/本期入库按单据类型/本期出库按单据类型/结存）
+      tags:
+      - 库存报表
+  /api/v1/inventory-reports/other-inout-stats:
+    get:
+      responses: {}
+      summary: 其他出入库统计
+      tags:
+      - 库存报表
+  /api/v1/inventory-reports/stock-distribution:
+    get:
+      responses: {}
+      summary: 库存分布表（各仓库数量列动态展开）
+      tags:
+      - 库存报表
+  /api/v1/inventory-reports/transfer-summary:
+    get:
+      responses: {}
+      summary: 调拨汇总表
+      tags:
+      - 库存报表
+  /api/v1/transfer-applies:
+    get:
+      responses: {}
+      summary: 调拨申请单列表
+      tags:
+      - 库存
+    post:
+      responses: {}
+      summary: 新增调拨申请单
+      tags:
+      - 库存
+  /api/v1/transfer-applies/:id:
+    delete:
+      responses: {}
+      summary: 删除调拨申请单
+      tags:
+      - 库存
+    get:
+      responses: {}
+      summary: 调拨申请单详情
+      tags:
+      - 库存
+    put:
+      responses: {}
+      summary: 修改调拨申请单
+      tags:
+      - 库存
+  /api/v1/transfer-applies/:id/approve:
+    put:
+      responses: {}
+      summary: 审核调拨申请单
+      tags:
+      - 库存
+  /api/v1/transfer-diffs:
+    get:
+      parameters:
+      - description: 包含没有差异商品行
+        in: query
+        name: includeNoDiff
+        type: boolean
+      - description: 包含未入库商品行
+        in: query
+        name: includeNotReceived
+        type: boolean
+      responses: {}
+      summary: 调拨差异处理列表
+      tags:
+      - 库存
+  /api/v1/transfer-diffs/:itemId/handle:
+    put:
+      responses: {}
+      summary: 处理调拨差异
+      tags:
+      - 库存
+  /api/v1/transfer-ins:
+    get:
+      responses: {}
+      summary: 调拨入库单列表
+      tags:
+      - 库存
+    post:
+      responses: {}
+      summary: 新增调拨入库单
+      tags:
+      - 库存
+  /api/v1/transfer-ins/:id:
+    get:
+      responses: {}
+      summary: 调拨入库单详情
+      tags:
+      - 库存
+  /api/v1/transfer-ins/:id/complete:
+    put:
+      responses: {}
+      summary: 调拨入库单过账
+      tags:
+      - 库存
+  /api/v1/transfer-outs:
+    get:
+      responses: {}
+      summary: 调拨出库单列表
+      tags:
+      - 库存
+    post:
+      responses: {}
+      summary: 新增调拨出库单
+      tags:
+      - 库存
+  /api/v1/transfer-outs/:id:
+    delete:
+      responses: {}
+      summary: 删除调拨出库单
+      tags:
+      - 库存
+    get:
+      responses: {}
+      summary: 调拨出库单详情
+      tags:
+      - 库存
+    put:
+      responses: {}
+      summary: 修改调拨出库单
+      tags:
+      - 库存
+  /api/v1/transfer-outs/:id/complete:
+    put:
+      responses: {}
+      summary: 调拨出库单过账
+      tags:
+      - 库存
   /other-in-stocks:
     get:
       parameters:
@@ -547,6 +983,28 @@ paths:
       summary: 导出其他入库单明细 Excel
       tags:
       - 库存
+  /other-in-stocks/import:
+    post:
+      consumes:
+      - multipart/form-data
+      parameters:
+      - description: 其他入库单明细文件（.xlsx/.xls）
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: 传 1 时过账单据同时增加库存（默认不写库存）
+        in: formData
+        name: applyStock
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 导入其他入库单
+      tags:
+      - 库存
   /other-out-stocks:
     get:
       parameters:
@@ -676,6 +1134,29 @@ paths:
           schema:
             $ref: '#/definitions/response.Response'
       summary: 其他出库单过账
+      tags:
+      - 库存
+  /stocks/import:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 导入老系统库存状况导出文件（.xls/.xlsx），按名称匹配/新建商品并把库存总量写入目标仓库
+      parameters:
+      - description: 库存状况导出文件（.xls/.xlsx，≤10MB）
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: 目标仓库ID，为空取公司第一个仓库
+        in: formData
+        name: warehouseId
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 库存状况 Excel 导入
       tags:
       - 库存
   /stocks/status:

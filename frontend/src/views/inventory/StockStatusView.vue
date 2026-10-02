@@ -3,6 +3,7 @@
     <div class="page-header">
       <h2 class="page-title">库存状况表</h2>
       <div class="page-actions">
+        <el-button @click="openImportDialog">导 入</el-button>
         <el-button @click="priceDialogVisible = true">价格展示设置</el-button>
         <el-button @click="openLimitDialog()">库存上下限设置</el-button>
         <el-button @click="handlePrint">打 印</el-button>
@@ -156,6 +157,36 @@
       </main>
     </div>
 
+    <!-- 库存状况导入 -->
+    <el-dialog v-model="importDialogVisible" title="库存状况导入" width="480px" @closed="resetImportDialog">
+      <el-form label-width="90px">
+        <el-form-item label="目标仓库">
+          <RemoteSelect v-model="importWarehouseId" api-url="/api/v1/warehouses" placeholder="为空则取公司第一个仓库" class="import-warehouse" />
+        </el-form-item>
+        <el-form-item label="导出文件">
+          <el-upload
+            drag
+            :auto-upload="false"
+            :limit="1"
+            accept=".xlsx,.xls"
+            :on-change="handleImportFileChange"
+            :on-remove="handleImportFileRemove"
+            :file-list="importFileList"
+          >
+            <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
+            <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
+            <template #tip>
+              <div class="el-upload__tip">支持老系统“库存状况列表”导出文件（.xls/.xlsx，≤10MB）</div>
+            </template>
+          </el-upload>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="importDialogVisible = false">取 消</el-button>
+        <el-button type="primary" :loading="importing" @click="submitImport">开始导入</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 价格展示设置 -->
     <el-dialog v-model="priceDialogVisible" title="价格展示设置" width="380px">
       <el-checkbox v-model="priceCols.costPrice">成本均价</el-checkbox>
@@ -249,7 +280,7 @@
 import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { More, Picture, Search } from '@element-plus/icons-vue'
+import { More, Picture, Search, UploadFilled } from '@element-plus/icons-vue'
 import SideTreePanel from '@/components/SideTreePanel.vue'
 import RemoteSelect from '@/components/RemoteSelect.vue'
 import { fetchCategoryTree, type CategoryNode } from '@/api/category'
@@ -257,6 +288,7 @@ import {
   fetchStockDistribution,
   fetchStockFlows,
   fetchStockStatus,
+  importStockStatus,
   updateStockLimits,
   type StockDistributionItem,
   type StockFlowItem,
@@ -524,6 +556,58 @@ function handlePrint() {
   window.print()
 }
 
+// ==================== 库存状况导入 ====================
+
+const importDialogVisible = ref(false)
+const importWarehouseId = ref<number | undefined>(undefined)
+const importFileList = ref<any[]>([])
+const importFile = ref<File | null>(null)
+const importing = ref(false)
+
+function openImportDialog() {
+  importDialogVisible.value = true
+}
+
+function resetImportDialog() {
+  importWarehouseId.value = undefined
+  importFileList.value = []
+  importFile.value = null
+}
+
+function handleImportFileChange(uploadFile: any) {
+  importFileList.value = [uploadFile]
+  importFile.value = uploadFile.raw ?? null
+}
+
+function handleImportFileRemove() {
+  importFileList.value = []
+  importFile.value = null
+}
+
+async function submitImport() {
+  if (!importFile.value) {
+    ElMessage.warning('请先选择要导入的文件')
+    return
+  }
+  importing.value = true
+  try {
+    const res = await importStockStatus(importFile.value, importWarehouseId.value)
+    if (res.data.code === 0 || res.data.code === 200) {
+      const data = res.data.data
+      ElMessage.success(
+        `导入完成（${data.warehouse}）：更新 ${data.updated}，新增 ${data.created}，库存写入 ${data.stocked}` +
+          (data.skipped ? `，跳过 ${data.skipped} 行` : ''),
+      )
+      importDialogVisible.value = false
+      fetchList()
+    }
+  } catch {
+    // 拦截器已提示
+  } finally {
+    importing.value = false
+  }
+}
+
 onMounted(() => {
   loadPriceCols()
   loadCategoryTree()
@@ -570,6 +654,7 @@ onMounted(() => {
 .total-text { color: var(--el-text-color-secondary); font-size: 13px; }
 .limit-alert { margin-bottom: 12px; }
 .limit-input { width: 100%; }
+.import-warehouse { width: 100%; }
 
 @media print {
   .page-header .page-actions, .category-panel, .filter-row, .toolbar-row, .pagination-row { display: none; }

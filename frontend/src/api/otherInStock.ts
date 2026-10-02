@@ -1,4 +1,5 @@
 import api from './client'
+import { ensureXlsxFile } from '@/utils/spreadsheet'
 
 export interface OtherInStockItem {
   id?: number
@@ -107,6 +108,23 @@ export function exportOtherInStocks(params: OtherInStockListQuery) {
 
 export function exportOtherInStockItems(params: OtherInStockListQuery) {
   return api.get('/api/v1/other-in-stocks/export/items', { params, responseType: 'blob' })
+}
+
+export interface OtherInStockImportResult {
+  created: number
+  skipped: number
+  createdProducts?: string[]
+  billNoMap?: Record<string, string>
+  errors?: { row: number; code: string; reason: string }[]
+}
+
+export async function importOtherInStocks(file: File, applyStock: boolean) {
+  const form = new FormData()
+  form.append('file', await ensureXlsxFile(file))
+  if (applyStock) form.append('applyStock', '1')
+  return api.post('/api/v1/other-in-stocks/import', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
 }
 
 export const OTHER_IN_TYPES = ['盘点报溢', '报溢入库', '盘盈入库', '期初入库', '其他入库']

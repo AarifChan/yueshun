@@ -3,6 +3,7 @@
     <div class="page-header">
       <h2 class="page-title">其他入库单列表</h2>
       <div class="page-actions">
+        <el-button @click="importVisible = true"><el-icon><Upload /></el-icon>导入</el-button>
         <el-dropdown trigger="click" @command="handleExport">
           <el-button><el-icon><Download /></el-icon>导出<el-icon><ArrowDown /></el-icon></el-button>
           <template #dropdown>
@@ -161,6 +162,57 @@
       />
     </div>
 
+    <!-- 导入 -->
+    <el-dialog v-model="importVisible" title="导入其他入库单" width="560px" :close-on-click-modal="false" @closed="resetImport">
+      <template v-if="!importResult">
+        <el-upload
+          drag
+          :auto-upload="false"
+          :limit="1"
+          accept=".xlsx,.xls"
+          :on-change="handleImportFileChange"
+          :on-remove="handleImportFileRemove"
+          :file-list="importFileList"
+        >
+          <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
+          <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
+          <template #tip>
+            <div class="el-upload__tip">支持 .xlsx / .xls，需包含 单据编号、商品名称、数量 等列</div>
+          </template>
+        </el-upload>
+        <el-checkbox v-model="importApplyStock" class="apply-stock-checkbox">同时增加库存（过账单据写入库存）</el-checkbox>
+      </template>
+      <template v-else>
+        <div class="import-summary">
+          <el-tag type="success">成功新增 {{ importResult.created }} 张单</el-tag>
+          <el-tag type="danger">跳过 {{ importResult.skipped }} 行</el-tag>
+          <el-tag v-if="importResult.createdProducts?.length" type="warning">
+            自动建档 {{ importResult.createdProducts.length }} 个商品
+          </el-tag>
+        </div>
+        <div v-if="importResult.createdProducts?.length" class="billno-map">
+          <p v-for="p in importResult.createdProducts" :key="p">新商品：{{ p }}</p>
+        </div>
+        <div v-if="billNoMapEntries.length" class="billno-map">
+          <p v-for="[oldNo, newNo] in billNoMapEntries" :key="oldNo">单号冲突：{{ oldNo }} → {{ newNo }}</p>
+        </div>
+        <el-table v-if="importResult.errors && importResult.errors.length" :data="importResult.errors" border size="small" max-height="260">
+          <el-table-column prop="row" label="行号" width="80" />
+          <el-table-column prop="code" label="单据编号" width="160" />
+          <el-table-column prop="reason" label="原因" min-width="200" />
+        </el-table>
+      </template>
+      <template #footer>
+        <template v-if="!importResult">
+          <el-button @click="importVisible = false">取消</el-button>
+          <el-button type="primary" :loading="importing" :disabled="!importFile" @click="startImport">开始导入</el-button>
+        </template>
+        <template v-else>
+          <el-button type="primary" @click="importVisible = false">完成</el-button>
+        </template>
+      </template>
+    </el-dialog>
+
     <!-- 筛选项设置 -->
     <el-dialog v-model="filterDialogVisible" title="筛选项设置" width="420px">
       <el-checkbox
@@ -184,7 +236,8 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowDown, Download, More, Plus, Search, Setting } from '@element-plus/icons-vue'
+import { ArrowDown, Download, More, Plus, Search, Setting, Upload, UploadFilled } from '@element-plus/icons-vue'
+import type { UploadFile } from 'element-plus'
 import RemoteSelect from '@/components/RemoteSelect.vue'
 import {
   OTHER_IN_TYPES,
@@ -193,7 +246,9 @@ import {
   exportOtherInStockItems,
   exportOtherInStocks,
   fetchOtherInStocks,
+  importOtherInStocks,
   type OtherInStock,
+  type OtherInStockImportResult,
   type OtherInStockListQuery,
 } from '@/api/otherInStock'
 
@@ -369,6 +424,49 @@ async function handleExport(cmd: string) {
   }
 }
 
+// ---- 导入 ----
+const importVisible = ref(false)
+const importing = ref(false)
+const importFile = ref<File | null>(null)
+const importFileList = ref<UploadFile[]>([])
+const importApplyStock = ref(false)
+const importResult = ref<OtherInStockImportResult | null>(null)
+const billNoMapEntries = computed(() => Object.entries(importResult.value?.billNoMap ?? {}))
+
+function handleImportFileChange(file: UploadFile) {
+  importFile.value = file.raw ?? null
+  importFileList.value = [file]
+}
+
+function handleImportFileRemove() {
+  importFile.value = null
+  importFileList.value = []
+}
+
+function resetImport() {
+  importFile.value = null
+  importFileList.value = []
+  importApplyStock.value = false
+  importResult.value = null
+}
+
+async function startImport() {
+  if (!importFile.value || importing.value) return
+  importing.value = true
+  try {
+    const res = await importOtherInStocks(importFile.value, importApplyStock.value)
+    if (res.data.code === 0 || res.data.code === 200) {
+      importResult.value = res.data.data
+      ElMessage.success(`导入完成：新增 ${importResult.value.created} 张单，跳过 ${importResult.value.skipped} 行`)
+      fetchList()
+    }
+  } catch {
+    // 拦截器已提示
+  } finally {
+    importing.value = false
+  }
+}
+
 function handleSearch() {
   pagination.page = 1
   fetchList()
@@ -450,4 +548,8 @@ onMounted(() => {
 }
 .total-text { color: var(--el-text-color-secondary); font-size: 13px; }
 .filter-conf-item { display: flex; margin-right: 0; }
+.apply-stock-checkbox { margin-top: 12px; }
+.import-summary { display: flex; gap: 8px; margin-bottom: 12px; }
+.billno-map { margin-bottom: 12px; font-size: 13px; color: var(--el-text-color-secondary); }
+.billno-map p { margin: 2px 0; }
 </style>

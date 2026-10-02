@@ -1,4 +1,5 @@
 import api from './client'
+import { ensureXlsxFile } from '@/utils/spreadsheet'
 
 export interface StockStatusQuery {
   page?: number
@@ -77,4 +78,19 @@ export function fetchStockFlows(productId: number, params: { page: number; pageS
 
 export function fetchStockDistribution(productId: number) {
   return api.get(`/api/v1/stocks/status/${productId}/warehouses`)
+}
+
+export interface StockImportResult {
+  warehouse: string
+  updated: number
+  created: number
+  stocked: number
+  skipped: number
+}
+
+export async function importStockStatus(file: File, warehouseId?: number) {
+  const fd = new FormData()
+  fd.append('file', await ensureXlsxFile(file))
+  if (warehouseId) fd.append('warehouseId', String(warehouseId))
+  return api.post('/api/v1/stocks/import', fd)
 }

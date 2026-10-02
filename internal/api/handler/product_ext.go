@@ -2,13 +2,11 @@ package handler
 
 import (
 	"fmt"
-	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
-	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
 	"zhizhang-server/internal/api/middleware"
 	"zhizhang-server/internal/model"
@@ -169,39 +167,33 @@ func (r *productImportRow) empty() bool {
 		r.Wholesale == "" && r.Retail == "" && r.Purchase == "" && r.Spec == ""
 }
 
-func (h *ProductHandler) readImportFile(c *gin.Context) (*excelize.File, [][]string, bool) {
+func (h *ProductHandler) readImportFile(c *gin.Context) ([][]string, bool) {
 	file, err := c.FormFile("file")
 	if err != nil {
 		response.BadRequest(c, "请上传文件")
-		return nil, nil, false
+		return nil, false
 	}
 	if file.Size > 10*1024*1024 {
 		response.BadRequest(c, "文件大小不能超过 10MB")
-		return nil, nil, false
-	}
-	if strings.ToLower(filepath.Ext(file.Filename)) != ".xlsx" {
-		response.BadRequest(c, "仅支持 .xlsx 文件")
-		return nil, nil, false
+		return nil, false
 	}
 	src, err := file.Open()
 	if err != nil {
 		response.ServerError(c, "读取文件失败")
-		return nil, nil, false
+		return nil, false
 	}
 	defer src.Close()
 
-	f, err := excelize.OpenReader(src)
+	rows, err := openSpreadsheetRows(src, file.Filename)
 	if err != nil {
-		response.BadRequest(c, "Excel 文件解析失败")
-		return nil, nil, false
+		response.BadRequest(c, err.Error())
+		return nil, false
 	}
-	rows, err := f.GetRows(f.GetSheetName(0))
-	if err != nil || len(rows) < 2 {
-		f.Close()
+	if len(rows) < 2 {
 		response.BadRequest(c, "文件内容为空")
-		return nil, nil, false
+		return nil, false
 	}
-	return f, rows, true
+	return rows, true
 }
 
 // createImportedProduct 在事务内创建导入的商品，返回错误原因（业务失败）或 error
@@ -276,11 +268,10 @@ func (h *ProductHandler) ImportProductsSystem(c *gin.Context) {
 		response.Unauthorized(c, "未登录")
 		return
 	}
-	f, rows, ok := h.readImportFile(c)
+	rows, ok := h.readImportFile(c)
 	if !ok {
 		return
 	}
-	defer f.Close()
 
 	created := 0
 	failed := 0
@@ -375,6 +366,9 @@ func customRecognizedHeaders() map[string]bool {
 		"按起订量倍数订购": true, "无需管控可用库存": true, "无需管控账面库存": true,
 		"上下架状态": true,
 		"商品条码": true, "规格备注1": true, "规格备注2": true,
+		"规格组": true, "规格值": true,
+		"基本单位-单位名称": true, "基本单位-单位条码": true, "基本单位-存放类型": true,
+		"默认销售单位": true, "默认采购单位": true, "禁购单位": true, "商品备注": true,
 		"重量(kg)": true, "重量（kg）": true,
 		"体积(m³)": true, "体积（m³）": true, "体积(m3)": true, "体积（m3）": true,
 	}
@@ -389,6 +383,9 @@ func customRecognizedHeaders() map[string]bool {
 	}
 	for n := 1; n <= customAuxUnitMax; n++ {
 		set[fmt.Sprintf("辅助单位%d-单位名称", n)] = true
+		set[fmt.Sprintf("辅助单位%d-换算率", n)] = true
+		set[fmt.Sprintf("辅助单位%d-单位条码", n)] = true
+		set[fmt.Sprintf("辅助单位%d-存放类型", n)] = true
 	}
 	return set
 }
@@ -549,7 +546,7 @@ func parseShelfCell(v string) (int8, bool) {
 	return 0, false
 }
 
-// ImportProductsCustom 自定义模板导入（按表头匹配，仅更新已有商品）
+// ImportProductsCustom 自定义模板导入（按表头匹配，支持更新已有商品与新增商品）
 func (h *ProductHandler) ImportProductsCustom(c *gin.Context) {
 	companyID := middleware.GetCompanyID(c)
 	if companyID == 0 {
@@ -558,11 +555,10 @@ func (h *ProductHandler) ImportProductsCustom(c *gin.Context) {
 	}
 	overwriteEmpty := c.PostForm("overwriteEmpty") == "1"
 
-	f, rows, ok := h.readImportFile(c)
+	rows, ok := h.readImportFile(c)
 	if !ok {
 		return
 	}
-	defer f.Close()
 
 	recognized := customRecognizedHeaders()
 	colIndex := map[string]int{}
@@ -598,6 +594,7 @@ func (h *ProductHandler) ImportProductsCustom(c *gin.Context) {
 	h.db.Model(&model.PriceLevel{}).Where("company_id = ? AND is_default = ?", companyID, true).Select("id").Scan(&defaultLevelID)
 
 	caches := newCustomImportCaches()
+	created := 0
 	updated := 0
 	failed := 0
 	errors := make([]PriceImportError, 0, 20)
@@ -623,31 +620,55 @@ func (h *ProductHandler) ImportProductsCustom(c *gin.Context) {
 				errors = append(errors, PriceImportError{Row: rowNo, Code: code, Reason: reason})
 			}
 		}
-		if code == "" {
-			fail("商品编号为空，无法更新")
-			continue
-		}
 
 		var product model.Product
 		var specItem model.ProductSpecItem
 		isSpecRow := false
-		err := h.db.Where("company_id = ? AND code = ?", companyID, code).First(&product).Error
-		if err == gorm.ErrRecordNotFound {
-			if err := h.db.Model(&model.ProductSpecItem{}).
-				Joins("JOIN products ON products.id = product_spec_items.product_id AND products.deleted_at IS NULL").
-				Where("product_spec_items.company_id = ? AND product_spec_items.code = ?", companyID, code).
-				Order("product_spec_items.id").
-				First(&specItem).Error; err != nil {
-				fail("商品编号不存在，无法更新")
+		found := false
+		if code != "" {
+			err := h.db.Where("company_id = ? AND code = ?", companyID, code).First(&product).Error
+			switch {
+			case err == nil:
+				found = true
+			case err == gorm.ErrRecordNotFound:
+				specErr := h.db.Model(&model.ProductSpecItem{}).
+					Joins("JOIN products ON products.id = product_spec_items.product_id AND products.deleted_at IS NULL").
+					Where("product_spec_items.company_id = ? AND product_spec_items.code = ?", companyID, code).
+					Order("product_spec_items.id").
+					First(&specItem).Error
+				if specErr == nil {
+					isSpecRow = true
+					if err := h.db.Where("id = ? AND company_id = ?", specItem.ProductID, companyID).First(&product).Error; err != nil {
+						fail("规格所属商品不存在")
+						continue
+					}
+					found = true
+				} else if specErr != gorm.ErrRecordNotFound {
+					fail("查询商品失败")
+					continue
+				}
+			default:
+				fail("查询商品失败")
 				continue
 			}
-			isSpecRow = true
-			if err := h.db.Where("id = ? AND company_id = ?", specItem.ProductID, companyID).First(&product).Error; err != nil {
-				fail("规格所属商品不存在")
+		}
+
+		// 编号为空或查不到已有商品（含规格行）→ 新增
+		if !found {
+			reason, err := h.createCustomProduct(companyID, code, defaultLevelID, caches,
+				func(name string) (string, bool) { return cell(raw, name) },
+				func(names ...string) (string, bool) { return cellFirst(raw, names...) },
+			)
+			if reason != "" {
+				fail(reason)
 				continue
 			}
-		} else if err != nil {
-			fail("查询商品失败")
+			if err != nil {
+				log.Error().Err(err).Int("row", rowNo).Msg("import custom create product failed")
+				fail("新增失败")
+				continue
+			}
+			created++
 			continue
 		}
 
@@ -898,7 +919,7 @@ func (h *ProductHandler) ImportProductsCustom(c *gin.Context) {
 			continue
 		}
 
-		err = h.db.Transaction(func(tx *gorm.DB) error {
+		err := h.db.Transaction(func(tx *gorm.DB) error {
 			if len(catPath) > 0 {
 				catID, err := caches.resolveCategoryPath(tx, companyID, catPath)
 				if err != nil {
@@ -1022,9 +1043,422 @@ func (h *ProductHandler) ImportProductsCustom(c *gin.Context) {
 	}
 
 	response.Ok(c, gin.H{
-		"created": 0,
+		"created": created,
 		"updated": updated,
 		"failed":  failed,
 		"errors":  errors,
 	})
+}
+
+// createCustomProduct 自定义模板导入的新增路径。
+// 在单事务内创建商品、规格行、单位（含价格）、默认级别价与标签关联。
+// 返回业务失败原因（reason 非空，该行计入 failed）或系统错误 err。
+func (h *ProductHandler) createCustomProduct(
+	companyID uint,
+	code string,
+	defaultLevelID uint,
+	caches *customImportCaches,
+	cell func(name string) (string, bool),
+	cellFirst func(names ...string) (string, bool),
+) (string, error) {
+	name, _ := cell("商品名称")
+	if name == "" {
+		return "商品名称不能为空", nil
+	}
+	baseUnitName, _ := cell("基本单位-单位名称")
+	if baseUnitName == "" {
+		return "基本单位-单位名称不能为空", nil
+	}
+
+	rowErr := ""
+	parseNum := func(colName, v string) float64 {
+		if v == "" || rowErr != "" {
+			return 0
+		}
+		fv, err := strconv.ParseFloat(v, 64)
+		if err != nil || fv < 0 {
+			rowErr = "「" + colName + "」数值格式错误"
+			return 0
+		}
+		return fv
+	}
+	cellNum := func(colName string) float64 {
+		v, _ := cell(colName)
+		return parseNum(colName, v)
+	}
+	parseBool := func(colName string) int8 {
+		v, _ := cell(colName)
+		if v == "" || rowErr != "" {
+			return 0
+		}
+		bv, ok := parseYesNoCell(v)
+		if !ok {
+			rowErr = "「" + colName + "」取值无效（是/否）"
+			return 0
+		}
+		return bv
+	}
+	parseStorageType := func(colName string) int8 {
+		v, _ := cell(colName)
+		switch v {
+		case "", "散货":
+			return 1
+		case "整件":
+			return 2
+		}
+		if rowErr == "" {
+			rowErr = "「" + colName + "」取值无效（散货/整件）"
+		}
+		return 1
+	}
+
+	// 上下架状态（默认上架）
+	status := int8(1)
+	if v, _ := cell("上下架状态"); v != "" {
+		if sv, ok := parseShelfCell(v); ok {
+			status = sv
+		} else {
+			rowErr = "「上下架状态」取值无效（上架/下架）"
+		}
+	}
+
+	mallSortWeight := 0
+	if v, _ := cell("商城排序权重"); v != "" && rowErr == "" {
+		iv, err := strconv.Atoi(v)
+		if err != nil {
+			rowErr = "「商城排序权重」格式错误"
+		} else {
+			mallSortWeight = iv
+		}
+	}
+
+	// 分类链（允许整组为空，中间不能有断层）
+	var catPath []string
+	if rowErr == "" {
+		levels := make([]string, 5)
+		lastFilled := -1
+		for lvl := 0; lvl < 5; lvl++ {
+			if v, m := cell(customCategoryCols[lvl]); m {
+				levels[lvl] = v
+				if v != "" {
+					lastFilled = lvl
+				}
+			}
+		}
+		if lastFilled >= 0 {
+			gap := -1
+			for lvl := 0; lvl < lastFilled; lvl++ {
+				if levels[lvl] == "" {
+					gap = lvl
+					break
+				}
+			}
+			if gap >= 0 {
+				rowErr = "商品分类必须先填写「" + customCategoryCols[gap] + "」"
+			} else {
+				catPath = levels[:lastFilled+1]
+			}
+		}
+	}
+
+	// 基本单位价格（5 种价格种类）
+	basePrices := map[string]float64{}
+	var defaultPrice *float64
+	productPrices := map[string]float64{}
+	for _, pk := range customPriceKinds {
+		colName := pk.name + "-基本单位价格"
+		v, m := cell(colName)
+		if !m || v == "" || rowErr != "" {
+			continue
+		}
+		fv := parseNum(colName, v)
+		if rowErr != "" {
+			break
+		}
+		basePrices[pk.unitField] = fv
+		if pk.productField == "" {
+			pv := fv
+			defaultPrice = &pv
+		} else {
+			productPrices[pk.productField] = fv
+		}
+	}
+
+	// 辅助单位
+	type auxUnitDraft struct {
+		name        string
+		conversion  float64
+		barcode     string
+		storageType int8
+		prices      map[string]float64
+	}
+	auxUnits := make([]auxUnitDraft, 0, customAuxUnitMax)
+	for n := 1; n <= customAuxUnitMax && rowErr == ""; n++ {
+		unitName, _ := cell(fmt.Sprintf("辅助单位%d-单位名称", n))
+		if unitName == "" {
+			continue
+		}
+		if unitName == baseUnitName {
+			rowErr = fmt.Sprintf("「辅助单位%d-单位名称」与基本单位重复", n)
+			break
+		}
+		dup := false
+		for _, au := range auxUnits {
+			if au.name == unitName {
+				dup = true
+				break
+			}
+		}
+		if dup {
+			rowErr = fmt.Sprintf("「辅助单位%d-单位名称」与其他辅助单位重复", n)
+			break
+		}
+		convCol := fmt.Sprintf("辅助单位%d-换算率", n)
+		conv, _ := cell(convCol)
+		if conv == "" {
+			rowErr = "「" + convCol + "」不能为空"
+			break
+		}
+		convF := parseNum(convCol, conv)
+		if rowErr == "" && convF <= 0 {
+			rowErr = "「" + convCol + "」必须大于 0"
+		}
+		barcode, _ := cell(fmt.Sprintf("辅助单位%d-单位条码", n))
+		draft := auxUnitDraft{
+			name:        unitName,
+			conversion:  convF,
+			barcode:     barcode,
+			storageType: parseStorageType(fmt.Sprintf("辅助单位%d-存放类型", n)),
+			prices:      map[string]float64{},
+		}
+		for _, pk := range customPriceKinds {
+			priceCol := fmt.Sprintf("%s-辅助单位%d价格", pk.name, n)
+			v, m := cell(priceCol)
+			if !m || v == "" {
+				continue
+			}
+			fv := parseNum(priceCol, v)
+			if rowErr != "" {
+				break
+			}
+			draft.prices[pk.unitField] = fv
+		}
+		auxUnits = append(auxUnits, draft)
+	}
+
+	specValue, _ := cell("规格值")
+	baseUnitBarcode, _ := cell("基本单位-单位条码")
+	productBarcode, _ := cell("商品条码")
+	weight := float64(0)
+	if v, m := cellFirst("重量(kg)", "重量（kg）"); m {
+		weight = parseNum("重量(kg)", v)
+	}
+	volume := float64(0)
+	if v, m := cellFirst("体积(m³)", "体积（m³）", "体积(m3)", "体积（m3）"); m {
+		volume = parseNum("体积(m³)", v)
+	}
+	remark1, _ := cell("规格备注1")
+	remark2, _ := cell("规格备注2")
+	pinyinCode, _ := cell("拼音码")
+	mallName, _ := cell("商城展示名称")
+	topicCategory, _ := cell("专题分类")
+	searchKeywords, _ := cell("搜索关键词")
+	forbidPurchaseUnits, _ := cell("禁购单位")
+	defaultSaleName, _ := cell("默认销售单位")
+	defaultPurchaseName, _ := cell("默认采购单位")
+	description, _ := cell("商品描述")
+	if description == "" {
+		description, _ = cell("商品备注")
+	}
+	barcode := baseUnitBarcode
+	if barcode == "" {
+		barcode = productBarcode
+	}
+	minOrderQty := cellNum("起订量")
+	maxOrderQty := cellNum("限订量")
+	orderByMultiple := parseBool("按起订量倍数订购")
+	noAvailableStockControl := parseBool("无需管控可用库存")
+	noBookStockControl := parseBool("无需管控账面库存")
+	baseStorageType := parseStorageType("基本单位-存放类型")
+
+	if rowErr != "" {
+		return rowErr, nil
+	}
+
+	err := h.db.Transaction(func(tx *gorm.DB) error {
+		product := model.Product{
+			BaseModelWithCompany:    model.BaseModelWithCompany{CompanyID: companyID},
+			Name:                    name,
+			Code:                    code,
+			Barcode:                 barcode,
+			Specification:           specValue,
+			Unit:                    baseUnitName,
+			PinyinCode:              pinyinCode,
+			MallName:                mallName,
+			TopicCategory:           topicCategory,
+			SearchKeywords:          searchKeywords,
+			Description:             description,
+			MinOrderQty:             minOrderQty,
+			MaxOrderQty:             maxOrderQty,
+			OrderByMultiple:         orderByMultiple,
+			NoAvailableStockControl: noAvailableStockControl,
+			NoBookStockControl:      noBookStockControl,
+			MinSalePrice:            productPrices["min_sale_price"],
+			WholesalePrice:          productPrices["wholesale_price"],
+			RetailPrice:             productPrices["retail_price"],
+			PurchasePrice:           productPrices["purchase_price"],
+			MallSortWeight:          mallSortWeight,
+			ForbidPurchaseUnits:     forbidPurchaseUnits,
+			Status:                  status,
+		}
+		if product.Code == "" {
+			genCode, err := nextProductCode(tx, companyID)
+			if err != nil {
+				return err
+			}
+			product.Code = genCode
+		}
+		if len(catPath) > 0 {
+			catID, err := caches.resolveCategoryPath(tx, companyID, catPath)
+			if err != nil {
+				return err
+			}
+			product.CategoryID = catID
+		}
+		if v, _ := cell("商品品牌"); v != "" {
+			brandID, err := caches.resolveBrand(tx, companyID, v)
+			if err != nil {
+				return err
+			}
+			product.BrandID = brandID
+		}
+		if v, _ := cell("默认供应商"); v != "" {
+			supplierID, err := caches.resolveSupplier(tx, companyID, v)
+			if err != nil {
+				return err
+			}
+			product.SupplierID = supplierID
+		}
+		if v, _ := cell("出库仓库"); v != "" {
+			warehouseID, err := caches.resolveWarehouse(tx, companyID, v)
+			if err != nil {
+				return err
+			}
+			product.WarehouseID = warehouseID
+		}
+		if err := tx.Create(&product).Error; err != nil {
+			return err
+		}
+		if status == 0 {
+			// gorm default:1 会在 Create 时吞掉显式 0，需显式回写下架状态
+			if err := tx.Model(&product).UpdateColumn("status", 0).Error; err != nil {
+				return err
+			}
+		}
+
+		specItem := model.ProductSpecItem{
+			BaseModelWithCompany: model.BaseModelWithCompany{CompanyID: companyID},
+			ProductID:            product.ID,
+			SpecValue:            specValue,
+			Code:                 product.Code,
+			Barcode:              productBarcode,
+			Weight:               weight,
+			Volume:               volume,
+			Remark1:              remark1,
+			Remark2:              remark2,
+			OnShelf:              status,
+		}
+		if err := tx.Create(&specItem).Error; err != nil {
+			return err
+		}
+
+		baseUnit := model.ProductUnit{
+			ProductID:      product.ID,
+			Name:           baseUnitName,
+			Conversion:     1,
+			IsDefault:      true,
+			Barcode:        baseUnitBarcode,
+			AllowSale:      1,
+			StorageType:    baseStorageType,
+			RefPrice:       basePrices["ref_price"],
+			WholesalePrice: basePrices["wholesale_price"],
+			RetailPrice:    basePrices["retail_price"],
+			MinSalePrice:   basePrices["min_sale_price"],
+			DefaultPrice:   basePrices["default_price"],
+			Status:         1,
+		}
+		if defaultSaleName == baseUnitName {
+			baseUnit.DefaultSale = 1
+		}
+		if defaultPurchaseName == baseUnitName {
+			baseUnit.DefaultPurchase = 1
+		}
+		if err := tx.Create(&baseUnit).Error; err != nil {
+			return err
+		}
+		for _, au := range auxUnits {
+			unit := model.ProductUnit{
+				ProductID:      product.ID,
+				Name:           au.name,
+				Conversion:     au.conversion,
+				Barcode:        au.barcode,
+				AllowSale:      1,
+				StorageType:    au.storageType,
+				RefPrice:       au.prices["ref_price"],
+				WholesalePrice: au.prices["wholesale_price"],
+				RetailPrice:    au.prices["retail_price"],
+				MinSalePrice:   au.prices["min_sale_price"],
+				DefaultPrice:   au.prices["default_price"],
+				Status:         1,
+			}
+			if defaultSaleName == au.name {
+				unit.DefaultSale = 1
+			}
+			if defaultPurchaseName == au.name {
+				unit.DefaultPurchase = 1
+			}
+			if err := tx.Create(&unit).Error; err != nil {
+				return err
+			}
+		}
+
+		if defaultPrice != nil && defaultLevelID > 0 {
+			pp := model.ProductPrice{
+				ProductID: product.ID,
+				UnitID:    0,
+				LevelID:   defaultLevelID,
+				Price:     *defaultPrice,
+				Status:    1,
+			}
+			if err := tx.Create(&pp).Error; err != nil {
+				return err
+			}
+		}
+
+		if v, _ := cell("商品标签"); v != "" {
+			for _, tagName := range strings.Split(v, "|") {
+				tagName = strings.TrimSpace(tagName)
+				if tagName == "" {
+					continue
+				}
+				tagID, err := caches.resolveTag(tx, companyID, tagName)
+				if err != nil {
+					return err
+				}
+				rel := model.ProductTagRelation{
+					BaseModelWithCompany: model.BaseModelWithCompany{CompanyID: companyID},
+					ProductID:            product.ID,
+					TagID:                tagID,
+				}
+				if err := tx.Create(&rel).Error; err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return "", err
+	}
+	return "", nil
 }

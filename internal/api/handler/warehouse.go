@@ -51,6 +51,7 @@ func (h *WarehouseHandler) RegisterRoutes(r *gin.RouterGroup) {
 	stocks := r.Group("/stocks")
 	{
 		stocks.GET("", h.ListStocks)
+		stocks.POST("/import", h.ImportStockStatus)
 		stocks.GET("/status", h.ListStockStatus)
 		stocks.PUT("/status/limits", h.UpdateStockLimits)
 		stocks.GET("/status/:productId/warehouses", h.ListStockDistribution)

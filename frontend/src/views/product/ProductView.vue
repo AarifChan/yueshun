@@ -334,7 +334,7 @@
             drag
             :auto-upload="false"
             :limit="1"
-            accept=".xlsx"
+            accept=".xlsx,.xls"
             :on-change="handleFileChange"
             :on-remove="handleFileRemove"
             :file-list="importFileList"
@@ -342,7 +342,7 @@
             <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
             <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
             <template #tip>
-              <div class="el-upload__tip">仅支持 .xlsx 格式文件</div>
+              <div class="el-upload__tip">支持 .xlsx / .xls 格式文件</div>
             </template>
           </el-upload>
           <el-checkbox v-if="importMode === 'custom'" v-model="overwriteEmpty" class="overwrite-checkbox">空信息覆盖</el-checkbox>
@@ -978,9 +978,9 @@ const importModeOptions = [
     value: 'custom' as const,
     label: '自定义模板导入',
     desc: [
-      '①该方式可以同时处理新商品导入和商品资料更新。若匹配到商品编号已经存在，将仅做商品更新。',
+      '①该方式可以同时处理新商品导入和商品资料更新。商品编号已存在时更新该商品；编号不存在或为空时将自动新增商品（商品名称、基本单位为必填）。',
       '②系统会根据字段名称逐一匹配后导入信息。没有匹配的字段不导入。',
-      '③商品更新时，仅更新已匹配的字段，没有匹配的字段将不更新。更新字段时，原内容将全部被覆盖（空信息覆盖请勾选配置项）。仅更新商品编号时，将不能同时更新其他字段内容。请谨慎操作！',
+      '③商品更新时，仅更新已匹配的字段，没有匹配的字段将不更新。更新字段时，原内容将全部被覆盖（空信息覆盖请勾选配置项）。请谨慎操作！',
     ],
   },
 ]

@@ -1,4 +1,5 @@
 import api from './client'
+import { ensureXlsxFile } from '@/utils/spreadsheet'
 
 export interface ProductListItem {
   id: number
@@ -89,15 +90,15 @@ export function deleteProduct(id: number) {
   return api.delete(`/api/v1/products/${id}`)
 }
 
-export function importProductsSystem(file: File) {
+export async function importProductsSystem(file: File) {
   const fd = new FormData()
-  fd.append('file', file)
+  fd.append('file', await ensureXlsxFile(file))
   return api.post('/api/v1/products/import/system', fd)
 }
 
-export function importProductsCustom(file: File, overwriteEmpty: boolean) {
+export async function importProductsCustom(file: File, overwriteEmpty: boolean) {
   const fd = new FormData()
-  fd.append('file', file)
+  fd.append('file', await ensureXlsxFile(file))
   fd.append('overwriteEmpty', overwriteEmpty ? '1' : '0')
   return api.post('/api/v1/products/import/custom', fd)
 }

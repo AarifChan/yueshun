@@ -15,6 +15,93 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/v1/assembly-orders": {
+            "get": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "组装拆装单列表",
+                "responses": {}
+            },
+            "post": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "新增组装拆装单",
+                "responses": {}
+            }
+        },
+        "/api/v1/assembly-orders/:id": {
+            "get": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "组装拆装单详情",
+                "responses": {}
+            },
+            "put": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "修改组装拆装单",
+                "responses": {}
+            },
+            "delete": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "删除组装拆装单",
+                "responses": {}
+            }
+        },
+        "/api/v1/assembly-orders/:id/complete": {
+            "put": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "组装拆装单过账",
+                "responses": {}
+            }
+        },
+        "/api/v1/assembly-templates": {
+            "get": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "拆装模板列表",
+                "responses": {}
+            },
+            "post": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "新增拆装模板",
+                "responses": {}
+            }
+        },
+        "/api/v1/assembly-templates/:id": {
+            "get": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "拆装模板详情",
+                "responses": {}
+            },
+            "put": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "修改拆装模板",
+                "responses": {}
+            },
+            "delete": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "删除拆装模板",
+                "responses": {}
+            }
+        },
         "/api/v1/auth/login": {
             "post": {
                 "description": "使用用户名和密码登录，返回 JWT 令牌",
@@ -293,6 +380,563 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/base-data/delivery-methods": {
+            "get": {
+                "tags": [
+                    "资料"
+                ],
+                "summary": "发货方式列表",
+                "responses": {}
+            },
+            "post": {
+                "tags": [
+                    "资料"
+                ],
+                "summary": "新增发货方式",
+                "responses": {}
+            }
+        },
+        "/api/v1/base-data/delivery-methods/:id": {
+            "put": {
+                "tags": [
+                    "资料"
+                ],
+                "summary": "修改发货方式",
+                "responses": {}
+            },
+            "delete": {
+                "tags": [
+                    "资料"
+                ],
+                "summary": "删除发货方式",
+                "responses": {}
+            }
+        },
+        "/api/v1/base-data/initial-accounts": {
+            "get": {
+                "tags": [
+                    "资料"
+                ],
+                "summary": "现金银行期初列表",
+                "responses": {}
+            },
+            "put": {
+                "tags": [
+                    "资料"
+                ],
+                "summary": "保存现金银行期初",
+                "responses": {}
+            }
+        },
+        "/api/v1/base-data/initial-balances": {
+            "get": {
+                "tags": [
+                    "资料"
+                ],
+                "summary": "往来期初列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "customer客户 supplier供应商",
+                        "name": "bizType",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            },
+            "put": {
+                "tags": [
+                    "资料"
+                ],
+                "summary": "保存往来期初",
+                "responses": {}
+            }
+        },
+        "/api/v1/base-data/initial-stocks": {
+            "get": {
+                "tags": [
+                    "资料"
+                ],
+                "summary": "商品库存期初列表",
+                "responses": {}
+            },
+            "put": {
+                "tags": [
+                    "资料"
+                ],
+                "summary": "保存商品库存期初",
+                "responses": {}
+            }
+        },
+        "/api/v1/base-data/logistics-companies": {
+            "get": {
+                "tags": [
+                    "资料"
+                ],
+                "summary": "物流公司列表",
+                "responses": {}
+            },
+            "post": {
+                "tags": [
+                    "资料"
+                ],
+                "summary": "新增物流公司",
+                "responses": {}
+            }
+        },
+        "/api/v1/base-data/logistics-companies/:id": {
+            "put": {
+                "tags": [
+                    "资料"
+                ],
+                "summary": "修改物流公司",
+                "responses": {}
+            },
+            "delete": {
+                "tags": [
+                    "资料"
+                ],
+                "summary": "删除物流公司",
+                "responses": {}
+            }
+        },
+        "/api/v1/base-data/materials": {
+            "get": {
+                "tags": [
+                    "资料"
+                ],
+                "summary": "素材库列表",
+                "responses": {}
+            },
+            "post": {
+                "tags": [
+                    "资料"
+                ],
+                "summary": "新增素材",
+                "responses": {}
+            }
+        },
+        "/api/v1/base-data/materials/:id": {
+            "delete": {
+                "tags": [
+                    "资料"
+                ],
+                "summary": "删除素材",
+                "responses": {}
+            }
+        },
+        "/api/v1/base-data/stock-op-types": {
+            "get": {
+                "tags": [
+                    "资料"
+                ],
+                "summary": "出入库类型列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "名称/编号",
+                        "name": "keyword",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "in入库 out出库",
+                        "name": "type",
+                        "in": "query"
+                    }
+                ],
+                "responses": {}
+            },
+            "post": {
+                "tags": [
+                    "资料"
+                ],
+                "summary": "新增出入库类型",
+                "responses": {}
+            }
+        },
+        "/api/v1/base-data/stock-op-types/:id": {
+            "put": {
+                "tags": [
+                    "资料"
+                ],
+                "summary": "修改出入库类型",
+                "responses": {}
+            },
+            "delete": {
+                "tags": [
+                    "资料"
+                ],
+                "summary": "删除出入库类型",
+                "responses": {}
+            }
+        },
+        "/api/v1/bill-center": {
+            "get": {
+                "tags": [
+                    "单据中心"
+                ],
+                "summary": "单据中心统一查询",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "单据类型",
+                        "name": "billType",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "单据编号",
+                        "name": "keyword",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "往来单位",
+                        "name": "counterpart",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "单据状态",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "支付状态",
+                        "name": "payStatus",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "只显示草稿单",
+                        "name": "onlyDraft",
+                        "in": "query"
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/api/v1/cost-adjusts": {
+            "get": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "成本调价单列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "单号",
+                        "name": "keyword",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "仓库",
+                        "name": "warehouseId",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "状态",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {}
+            },
+            "post": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "新增成本调价单",
+                "responses": {}
+            }
+        },
+        "/api/v1/cost-adjusts/:id": {
+            "get": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "成本调价单详情",
+                "responses": {}
+            },
+            "put": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "修改成本调价单",
+                "responses": {}
+            },
+            "delete": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "删除成本调价单",
+                "responses": {}
+            }
+        },
+        "/api/v1/cost-adjusts/:id/complete": {
+            "put": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "成本调价单过账",
+                "responses": {}
+            }
+        },
+        "/api/v1/inventory-reports/batch-stats": {
+            "get": {
+                "tags": [
+                    "库存报表"
+                ],
+                "summary": "库存批号统计",
+                "responses": {}
+            }
+        },
+        "/api/v1/inventory-reports/batch-trace": {
+            "get": {
+                "tags": [
+                    "库存报表"
+                ],
+                "summary": "批号跟踪详情",
+                "responses": {}
+            }
+        },
+        "/api/v1/inventory-reports/expiry-warning": {
+            "get": {
+                "tags": [
+                    "库存报表"
+                ],
+                "summary": "商品近效期预警",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "预警天数 默认90",
+                        "name": "days",
+                        "in": "query"
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/api/v1/inventory-reports/inout-flow": {
+            "get": {
+                "tags": [
+                    "库存报表"
+                ],
+                "summary": "商品出入库流水（行级，跨单据类型）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "单据类型",
+                        "name": "billType",
+                        "in": "query"
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/api/v1/inventory-reports/inout-summary": {
+            "get": {
+                "tags": [
+                    "库存报表"
+                ],
+                "summary": "商品进销存汇总（期初/本期入库按单据类型/本期出库按单据类型/结存）",
+                "responses": {}
+            }
+        },
+        "/api/v1/inventory-reports/other-inout-stats": {
+            "get": {
+                "tags": [
+                    "库存报表"
+                ],
+                "summary": "其他出入库统计",
+                "responses": {}
+            }
+        },
+        "/api/v1/inventory-reports/stock-distribution": {
+            "get": {
+                "tags": [
+                    "库存报表"
+                ],
+                "summary": "库存分布表（各仓库数量列动态展开）",
+                "responses": {}
+            }
+        },
+        "/api/v1/inventory-reports/transfer-summary": {
+            "get": {
+                "tags": [
+                    "库存报表"
+                ],
+                "summary": "调拨汇总表",
+                "responses": {}
+            }
+        },
+        "/api/v1/transfer-applies": {
+            "get": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "调拨申请单列表",
+                "responses": {}
+            },
+            "post": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "新增调拨申请单",
+                "responses": {}
+            }
+        },
+        "/api/v1/transfer-applies/:id": {
+            "get": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "调拨申请单详情",
+                "responses": {}
+            },
+            "put": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "修改调拨申请单",
+                "responses": {}
+            },
+            "delete": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "删除调拨申请单",
+                "responses": {}
+            }
+        },
+        "/api/v1/transfer-applies/:id/approve": {
+            "put": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "审核调拨申请单",
+                "responses": {}
+            }
+        },
+        "/api/v1/transfer-diffs": {
+            "get": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "调拨差异处理列表",
+                "parameters": [
+                    {
+                        "type": "boolean",
+                        "description": "包含没有差异商品行",
+                        "name": "includeNoDiff",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "包含未入库商品行",
+                        "name": "includeNotReceived",
+                        "in": "query"
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/api/v1/transfer-diffs/:itemId/handle": {
+            "put": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "处理调拨差异",
+                "responses": {}
+            }
+        },
+        "/api/v1/transfer-ins": {
+            "get": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "调拨入库单列表",
+                "responses": {}
+            },
+            "post": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "新增调拨入库单",
+                "responses": {}
+            }
+        },
+        "/api/v1/transfer-ins/:id": {
+            "get": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "调拨入库单详情",
+                "responses": {}
+            }
+        },
+        "/api/v1/transfer-ins/:id/complete": {
+            "put": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "调拨入库单过账",
+                "responses": {}
+            }
+        },
+        "/api/v1/transfer-outs": {
+            "get": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "调拨出库单列表",
+                "responses": {}
+            },
+            "post": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "新增调拨出库单",
+                "responses": {}
+            }
+        },
+        "/api/v1/transfer-outs/:id": {
+            "get": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "调拨出库单详情",
+                "responses": {}
+            },
+            "put": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "修改调拨出库单",
+                "responses": {}
+            },
+            "delete": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "删除调拨出库单",
+                "responses": {}
+            }
+        },
+        "/api/v1/transfer-outs/:id/complete": {
+            "put": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "调拨出库单过账",
+                "responses": {}
+            }
+        },
         "/other-in-stocks": {
             "get": {
                 "tags": [
@@ -505,6 +1149,40 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "type": "file"
+                        }
+                    }
+                }
+            }
+        },
+        "/other-in-stocks/import": {
+            "post": {
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "tags": [
+                    "库存"
+                ],
+                "summary": "导入其他入库单",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "其他入库单明细文件（.xlsx/.xls）",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "传 1 时过账单据同时增加库存（默认不写库存）",
+                        "name": "applyStock",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -805,6 +1483,41 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/stocks/import": {
+            "post": {
+                "description": "导入老系统库存状况导出文件（.xls/.xlsx），按名称匹配/新建商品并把库存总量写入目标仓库",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "tags": [
+                    "库存"
+                ],
+                "summary": "库存状况 Excel 导入",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "库存状况导出文件（.xls/.xlsx，≤10MB）",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "目标仓库ID，为空取公司第一个仓库",
+                        "name": "warehouseId",
+                        "in": "formData"
                     }
                 ],
                 "responses": {
