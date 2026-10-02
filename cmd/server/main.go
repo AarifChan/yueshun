@@ -268,6 +268,14 @@ func autoMigrate(db *gorm.DB) error {
 		&model.ApprovalRecord{},
 		// 公司级设置
 		&model.CompanySetting{},
+		// 资料模块
+		&model.StockOpType{},
+		&model.DeliveryMethod{},
+		&model.LogisticsCompany{},
+		&model.Material{},
+		&model.InitialStock{},
+		&model.InitialBalance{},
+		&model.InitialAccountBalance{},
 	); err != nil {
 		return err
 	}

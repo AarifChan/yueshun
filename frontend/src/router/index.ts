@@ -67,6 +67,57 @@ const router = createRouter({
             },
           ],
         },
+        // 资料
+        {
+          path: '',
+          name: 'GroupBaseData',
+          component: RouterView,
+          meta: { title: '资料', icon: 'Folder' },
+          children: [
+            {
+              path: 'base-data/stock-op-types',
+              name: 'StockOpTypes',
+              component: () => import('@/views/basedata/StockOpTypeView.vue'),
+              meta: { title: '出入库类型', icon: 'Sort' },
+            },
+            {
+              path: 'base-data/delivery-methods',
+              name: 'DeliveryMethods',
+              component: () => import('@/views/basedata/DeliveryMethodView.vue'),
+              meta: { title: '发货方式', icon: 'Van' },
+            },
+            {
+              path: 'base-data/logistics-companies',
+              name: 'LogisticsCompanies',
+              component: () => import('@/views/basedata/LogisticsCompanyView.vue'),
+              meta: { title: '物流公司', icon: 'Location' },
+            },
+            {
+              path: 'base-data/materials',
+              name: 'Materials',
+              component: () => import('@/views/basedata/MaterialView.vue'),
+              meta: { title: '素材库', icon: 'Picture' },
+            },
+            {
+              path: 'base-data/initial-stocks',
+              name: 'InitialStocks',
+              component: () => import('@/views/basedata/InitialStockView.vue'),
+              meta: { title: '商品库存期初', icon: 'Box' },
+            },
+            {
+              path: 'base-data/initial-balances',
+              name: 'InitialBalances',
+              component: () => import('@/views/basedata/InitialBalanceView.vue'),
+              meta: { title: '往来期初', icon: 'ScaleToOriginal' },
+            },
+            {
+              path: 'base-data/initial-accounts',
+              name: 'InitialAccounts',
+              component: () => import('@/views/basedata/InitialAccountView.vue'),
+              meta: { title: '现金银行期初', icon: 'Wallet' },
+            },
+          ],
+        },
         // 商品资料
         {
           path: '',
