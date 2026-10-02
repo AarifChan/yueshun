@@ -20,7 +20,7 @@ database:
   max_open_conns: 25
   max_idle_conns: 10
   conn_max_lifetime: 3600 # seconds
-  log_level: "info" # silent | error | warn | info
+  log_level: "warn" # silent | error | warn | info（info 会打印每条 SQL，启动迁移时非常吵）
 
 redis:
   host: "localhost"

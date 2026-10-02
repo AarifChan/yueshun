@@ -70,6 +70,12 @@ func main() {
 	// 初始化日志
 	initLogger(cfg)
 
+	// gin 默认使用 release 模式：屏蔽启动时几百行的路由打印和代理警告。
+	// 需要排查路由时设置 GIN_MODE=debug 可恢复详细输出。
+	if os.Getenv("GIN_MODE") == "" {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
 	log.Info().
 		Str("app", cfg.App.Name).
 		Str("version", cfg.App.Version).
@@ -81,6 +87,7 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("database init failed")
 	}
+	log.Info().Str("host", cfg.Database.Host).Str("database", cfg.Database.Database).Msg("database connected")
 
 	// 自动迁移
 	if err := autoMigrate(db); err != nil {
@@ -99,12 +106,9 @@ func main() {
 
 	// 初始化 Redis（可选，非阻塞）
 	if _, err := redis.Init(&cfg.Redis); err != nil {
-		log.Warn().Err(err).Msg("redis init failed, continuing without cache")
-	}
-
-	// 设置运行模式
-	if cfg.App.Env == "prod" {
-		gin.SetMode(gin.ReleaseMode)
+		log.Warn().Err(err).Msg("redis unavailable, continuing without cache")
+	} else {
+		log.Info().Str("host", fmt.Sprintf("%s:%d", cfg.Redis.Host, cfg.Redis.Port)).Msg("redis connected")
 	}
 
 	// JWT 配置
@@ -137,10 +141,11 @@ func main() {
 		AppID:  cfg.WechatMP.AppID,
 		Secret: cfg.WechatMP.Secret,
 	}, uploadDir)
+	log.Info().Int("routes", len(router.Routes())).Msg("routes registered")
 
 	// 启动服务
 	addr := fmt.Sprintf(":%d", cfg.App.Port)
-	log.Info().Str("addr", addr).Msg("server listening")
+	log.Info().Str("addr", addr).Str("swagger", fmt.Sprintf("http://localhost:%d/swagger/index.html", cfg.App.Port)).Msg("server listening")
 	if err := router.Run(addr); err != nil {
 		log.Fatal().Err(err).Msg("server failed")
 	}

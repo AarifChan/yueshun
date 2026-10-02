@@ -21,8 +21,14 @@ type Config struct {
 var Client *redis.Client
 var ctx = context.Background()
 
+// discardLogger 屏蔽 go-redis 内部的连接池重试日志（连不上时由 Init 统一告警）
+type discardLogger struct{}
+
+func (discardLogger) Printf(_ context.Context, _ string, _ ...interface{}) {}
+
 // Init 初始化 Redis
 func Init(cfg *Config) (*redis.Client, error) {
+	redis.SetLogger(discardLogger{})
 	Client = redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
 		Password: cfg.Password,

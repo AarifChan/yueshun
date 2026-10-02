@@ -63,6 +63,10 @@ func SetupRouter(db *gorm.DB, jwtCfg *middleware.JWTConfig, wecomCfg *wecom.Conf
 	settingExtHandler := handler.NewSettingExtHandler(db)
 
 	router := gin.New()
+	// 不经过反向代理信任链，直接取远端地址（同时屏蔽 gin 的 trusted proxies 警告）
+	if err := router.SetTrustedProxies(nil); err != nil {
+		log.Warn().Err(err).Msg("set trusted proxies failed")
+	}
 	router.Use(middleware.CORSMiddleware())
 	router.Use(middleware.LoggerMiddleware())
 	router.Use(gin.Recovery())
