@@ -4,6 +4,8 @@
       <template #header>
         <div class="card-header"><span>职员管理</span><el-button type="primary" @click="goCreate">新增职员</el-button></div>
       </template>
+      <el-alert type="info" :closable="false" style="margin-bottom: 12px"
+        title="请在企业微信通讯录添加职员，职员若存在应用可见范围中将自动同步到职员列表。" />
       <el-form :model="searchForm" inline class="search-form">
         <el-form-item label="关键词"><el-input v-model="searchForm.keyword" placeholder="用户名/姓名/手机号" clearable /></el-form-item>
         <el-form-item label="部门"><RemoteSelect v-model="searchForm.deptId" api-url="/api/v1/departments" placeholder="部门" /></el-form-item>

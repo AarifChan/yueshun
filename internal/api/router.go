@@ -61,6 +61,7 @@ func SetupRouter(db *gorm.DB, jwtCfg *middleware.JWTConfig, wecomCfg *wecom.Conf
 	biHandler := handler.NewBIHandler(db)
 	ecosystemHandler := handler.NewEcosystemHandler(db)
 	settingExtHandler := handler.NewSettingExtHandler(db)
+	messageHandler := handler.NewMessageHandler(db)
 
 	router := gin.New()
 	// 不经过反向代理信任链，直接取远端地址（同时屏蔽 gin 的 trusted proxies 警告）
@@ -161,6 +162,7 @@ func SetupRouter(db *gorm.DB, jwtCfg *middleware.JWTConfig, wecomCfg *wecom.Conf
 			biHandler.RegisterRoutes(authorized)
 			ecosystemHandler.RegisterRoutes(authorized)
 			settingExtHandler.RegisterRoutes(authorized)
+			messageHandler.RegisterRoutes(authorized)
 
 			// 文件上传
 			uploadHandler.RegisterRoutes(authorized)

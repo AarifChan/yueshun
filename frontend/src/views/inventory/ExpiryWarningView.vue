@@ -3,6 +3,7 @@
     <div class="page-header">
       <h2 class="page-title">商品近效期预警</h2>
       <div>
+        <el-button @click="openMsgSetting">消息设置</el-button>
         <el-button @click="doExport">导出</el-button>
         <el-button type="primary" @click="search">查询</el-button>
       </div>
@@ -52,13 +53,57 @@
       </el-table>
       <el-pagination v-model:current-page="page" v-model:page-size="pageSize" :total="total" :page-sizes="[30,50,100]" layout="total, sizes, prev, pager, next" @size-change="() => load(1)" @current-change="load" class="pagination" />
     </el-card>
+
+    <el-dialog v-model="msgSettingVisible" title="消息设置" width="560px">
+      <el-alert type="info" :closable="false" title="管理员和系统管理员默认将收到消息" style="margin-bottom: 16px" />
+      <el-form v-loading="msgSettingLoading" label-width="90px">
+        <el-form-item label="临近效期">
+          <div class="notify-row">
+            <el-switch v-model="msgSetting.warnEnabled" />
+            <span class="notify-desc">商品过期前，接近效期报警天数发送预警通知，可添加接收人</span>
+          </div>
+          <RemoteSelect
+            v-model="msgSetting.warnReceivers"
+            api-url="/api/v1/employees"
+            placeholder="添加接收人"
+            multiple
+            class="notify-receivers"
+          />
+        </el-form-item>
+        <el-form-item label="过期通知">
+          <div class="notify-row">
+            <el-switch v-model="msgSetting.expiredEnabled" />
+            <span class="notify-desc">商品过期后发送过期通知，可添加接收人</span>
+          </div>
+          <RemoteSelect
+            v-model="msgSetting.expiredReceivers"
+            api-url="/api/v1/employees"
+            placeholder="添加接收人"
+            multiple
+            class="notify-receivers"
+          />
+        </el-form-item>
+        <el-form-item label="发送时间">
+          <el-select v-model="msgSetting.sendHour" style="width: 120px">
+            <el-option v-for="h in 24" :key="h - 1" :label="`${h - 1} 时`" :value="h - 1" />
+          </el-select>
+          <span class="notify-desc" style="margin-left: 8px">每天该小时开始发送消息</span>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="msgSettingVisible = false">取消</el-button>
+        <el-button type="primary" :loading="msgSettingSaving" @click="saveMsgSetting">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
+import { ElMessage } from 'element-plus'
 import RemoteSelect from '@/components/RemoteSelect.vue'
 import { useReport } from '@/composables/useReport'
+import api from '@/api/client'
 
 interface Row {
   id: number; productName: string; specification: string; batchNo: string
@@ -84,6 +129,53 @@ function doExport() {
 }
 
 onMounted(() => load(1))
+
+// ---- 消息设置（管理员和系统管理员默认将收到消息）----
+const msgSettingVisible = ref(false)
+const msgSettingLoading = ref(false)
+const msgSettingSaving = ref(false)
+const msgSetting = ref({
+  warnEnabled: false,
+  warnReceivers: [] as number[],
+  expiredEnabled: false,
+  expiredReceivers: [] as number[],
+  sendHour: 8,
+})
+
+async function openMsgSetting() {
+  msgSettingVisible.value = true
+  msgSettingLoading.value = true
+  try {
+    const res = await api.get('/api/v1/message-settings/expiry-warning')
+    if (res.data.code === 0 || res.data.code === 200) {
+      const d = res.data.data || {}
+      msgSetting.value = {
+        warnEnabled: d.warnEnabled ?? false,
+        warnReceivers: d.warnReceivers ?? [],
+        expiredEnabled: d.expiredEnabled ?? false,
+        expiredReceivers: d.expiredReceivers ?? [],
+        sendHour: d.sendHour ?? 8,
+      }
+    }
+  } finally {
+    msgSettingLoading.value = false
+  }
+}
+
+async function saveMsgSetting() {
+  msgSettingSaving.value = true
+  try {
+    const res = await api.put('/api/v1/message-settings/expiry-warning', msgSetting.value)
+    if (res.data.code === 0 || res.data.code === 200) {
+      ElMessage.success('已保存')
+      msgSettingVisible.value = false
+    } else {
+      ElMessage.error(res.data.message || '保存失败')
+    }
+  } finally {
+    msgSettingSaving.value = false
+  }
+}
 </script>
 
 <style scoped>
@@ -93,4 +185,7 @@ onMounted(() => load(1))
 .warn-text { color: var(--el-color-warning); font-weight: 600; }
 .expired-text { color: var(--el-color-danger); font-weight: 600; }
 .pagination { margin-top: 16px; justify-content: flex-end; }
+.notify-row { display: flex; align-items: center; gap: 10px; }
+.notify-desc { font-size: 12px; color: #909399; }
+.notify-receivers { margin-top: 8px; width: 100%; }
 </style>

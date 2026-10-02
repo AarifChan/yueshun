@@ -21,6 +21,7 @@
         </div>
       </nav>
       <div class="header-right">
+        <MessageCenter />
         <el-dropdown @command="handleCommand">
           <span class="user-info">
             <el-icon><UserFilled /></el-icon>
@@ -110,6 +111,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
+import MessageCenter from '@/components/MessageCenter.vue'
 import router from '@/router'
 
 const route = useRoute()
@@ -317,6 +319,9 @@ async function handleCommand(command: string) {
 .header-right {
   margin-left: 16px;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .user-info {
   display: flex;

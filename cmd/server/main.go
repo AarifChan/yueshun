@@ -322,6 +322,9 @@ func autoMigrate(db *gorm.DB) error {
 		&model.Printer{},
 		&model.ProductRelation{},
 		&model.EmployeePermission{},
+		// 消息中心
+		&model.Message{},
+		&model.MessageUserSetting{},
 	); err != nil {
 		return err
 	}
