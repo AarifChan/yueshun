@@ -309,6 +309,9 @@ func autoMigrate(db *gorm.DB) error {
 		&model.DistributorWithdrawal{},
 		&model.StoredValueRule{},
 		&model.StoredValueRecord{},
+		&model.SupplierConnection{},
+		&model.ReceivedGoods{},
+		&model.ReceivedDecoration{},
 	); err != nil {
 		return err
 	}

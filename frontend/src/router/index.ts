@@ -1133,6 +1133,39 @@ const router = createRouter({
             },
           ],
         },
+        // 生态互联
+        {
+          path: '',
+          name: 'GroupEcosystem',
+          component: RouterView,
+          meta: { title: '生态互联', icon: 'Link' },
+          children: [
+            {
+              path: 'ecosystem/guide',
+              name: 'EcosystemGuide',
+              component: () => import('@/views/ecosystem/UpstreamGuideView.vue'),
+              meta: { title: '上游管理', icon: 'Reading' },
+            },
+            {
+              path: 'ecosystem/supplier-links',
+              name: 'EcosystemSupplierLinks',
+              component: () => import('@/views/ecosystem/SupplierConnectionView.vue'),
+              meta: { title: '供应商连接', icon: 'Connection' },
+            },
+            {
+              path: 'ecosystem/receive-goods',
+              name: 'EcosystemReceiveGoods',
+              component: () => import('@/views/ecosystem/ReceiveGoodsView.vue'),
+              meta: { title: '商品接收', icon: 'TakeawayBox' },
+            },
+            {
+              path: 'ecosystem/receive-decoration',
+              name: 'EcosystemReceiveDecoration',
+              component: () => import('@/views/ecosystem/ReceiveDecorationView.vue'),
+              meta: { title: '商城装修接收', icon: 'Brush' },
+            },
+          ],
+        },
         // 审批管理
         {
           path: '',
