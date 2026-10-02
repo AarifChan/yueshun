@@ -53,6 +53,11 @@
               </el-select>
             </el-form-item>
           </el-col>
+          <el-col :span="6">
+            <el-form-item label="业务经理">
+              <RemoteSelect v-model="form.businessManagerId" api-url="/api/v1/employees" placeholder="请选择" />
+            </el-form-item>
+          </el-col>
         </el-row>
         <el-row>
           <el-col :span="12">
@@ -209,6 +214,7 @@ const form = reactive({
   settleUnit: '',
   handlerId: authStore.user?.id as number | undefined,
   deptId: authStore.user?.deptId as number | undefined,
+  businessManagerId: undefined as number | undefined,
   billDate: dayjs().format('YYYY-MM-DD'),
   inType: '报溢入库',
   remark: '',
@@ -293,6 +299,7 @@ async function loadDetail(id: number) {
         settleUnit: data.settleUnit,
         handlerId: data.handlerId || undefined,
         deptId: data.deptId || undefined,
+        businessManagerId: data.businessManagerId || undefined,
         billDate: data.billDate ? dayjs(data.billDate).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD'),
         inType: data.inType,
         remark: data.remark,
@@ -349,6 +356,7 @@ async function save(complete: boolean) {
       settleUnit: form.settleUnit,
       handlerId: form.handlerId,
       deptId: form.deptId,
+      businessManagerId: form.businessManagerId,
       remark: form.remark,
       items: validItems.map((i) => ({
         productId: i.productId!,

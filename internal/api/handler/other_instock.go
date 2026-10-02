@@ -29,6 +29,8 @@ func (h *OtherInStockHandler) RegisterRoutes(r *gin.RouterGroup) {
 	{
 		g.GET("", h.List)
 		g.POST("", h.Create)
+		g.GET("/export", h.ExportList)
+		g.GET("/export/items", h.ExportItems)
 		g.GET("/:id", h.Get)
 		g.PUT("/:id", h.Update)
 		g.DELETE("/:id", h.Delete)
@@ -50,10 +52,58 @@ type OtherInStockListReq struct {
 
 type OtherInStockListResp struct {
 	model.OtherInStock
-	WarehouseName string `json:"warehouseName"`
-	OperatorName  string `json:"operatorName"`
-	HandlerName   string `json:"handlerName"`
-	DeptName      string `json:"deptName"`
+	WarehouseName       string `json:"warehouseName"`
+	OperatorName        string `json:"operatorName"`
+	HandlerName         string `json:"handlerName"`
+	DeptName            string `json:"deptName"`
+	BusinessManagerName string `json:"businessManagerName"`
+}
+
+// applyOtherInStockFilters 其他入库单列表通用过滤条件（列表与导出共用）
+func applyOtherInStockFilters(q *gorm.DB, companyID uint, req *OtherInStockListReq) *gorm.DB {
+	q = q.Where("other_in_stocks.company_id = ?", companyID)
+	if req.Keyword != "" {
+		q = q.Where("other_in_stocks.bill_no LIKE ?", "%"+req.Keyword+"%")
+	}
+	if req.WarehouseID > 0 {
+		q = q.Where("other_in_stocks.warehouse_id = ?", req.WarehouseID)
+	}
+	if req.Status != "" {
+		q = q.Where("other_in_stocks.status = ?", req.Status)
+	}
+	if req.InType != "" {
+		q = q.Where("other_in_stocks.in_type = ?", req.InType)
+	}
+	if req.StartDate != "" {
+		q = q.Where("other_in_stocks.created_at >= ?", req.StartDate+" 00:00:00")
+	}
+	if req.EndDate != "" {
+		q = q.Where("other_in_stocks.created_at <= ?", req.EndDate+" 23:59:59")
+	}
+	if req.ProductKw != "" {
+		q = q.Where(`EXISTS (
+			SELECT 1 FROM other_in_stock_items oi
+			JOIN products p ON p.id = oi.product_id
+			WHERE oi.in_stock_id = other_in_stocks.id
+			  AND (p.name LIKE ? OR p.code LIKE ?))`, "%"+req.ProductKw+"%", "%"+req.ProductKw+"%")
+	}
+	return q
+}
+
+// withNames 关联仓库/职员/部门名称（列表与导出共用）
+func (h *OtherInStockHandler) withNames(q *gorm.DB) *gorm.DB {
+	return q.
+		Select(`other_in_stocks.*,
+			COALESCE(w.name, '') AS warehouse_name,
+			COALESCE(op.name, '') AS operator_name,
+			COALESCE(hd.name, '') AS handler_name,
+			COALESCE(d.name, '') AS dept_name,
+			COALESCE(bm.name, '') AS business_manager_name`).
+		Joins("LEFT JOIN warehouses w ON w.id = other_in_stocks.warehouse_id").
+		Joins("LEFT JOIN employees op ON op.id = other_in_stocks.operator_id").
+		Joins("LEFT JOIN employees hd ON hd.id = other_in_stocks.handler_id").
+		Joins("LEFT JOIN departments d ON d.id = other_in_stocks.dept_id").
+		Joins("LEFT JOIN employees bm ON bm.id = other_in_stocks.business_manager_id")
 }
 
 // List 其他入库单列表
@@ -82,50 +132,11 @@ func (h *OtherInStockHandler) List(c *gin.Context) {
 		return
 	}
 
-	applyFilters := func(q *gorm.DB) *gorm.DB {
-		q = q.Where("other_in_stocks.company_id = ?", companyID)
-		if req.Keyword != "" {
-			q = q.Where("other_in_stocks.bill_no LIKE ?", "%"+req.Keyword+"%")
-		}
-		if req.WarehouseID > 0 {
-			q = q.Where("other_in_stocks.warehouse_id = ?", req.WarehouseID)
-		}
-		if req.Status != "" {
-			q = q.Where("other_in_stocks.status = ?", req.Status)
-		}
-		if req.InType != "" {
-			q = q.Where("other_in_stocks.in_type = ?", req.InType)
-		}
-		if req.StartDate != "" {
-			q = q.Where("other_in_stocks.created_at >= ?", req.StartDate+" 00:00:00")
-		}
-		if req.EndDate != "" {
-			q = q.Where("other_in_stocks.created_at <= ?", req.EndDate+" 23:59:59")
-		}
-		if req.ProductKw != "" {
-			q = q.Where(`EXISTS (
-				SELECT 1 FROM other_in_stock_items oi
-				JOIN products p ON p.id = oi.product_id
-				WHERE oi.in_stock_id = other_in_stocks.id
-				  AND (p.name LIKE ? OR p.code LIKE ?))`, "%"+req.ProductKw+"%", "%"+req.ProductKw+"%")
-		}
-		return q
-	}
-
 	var total int64
-	applyFilters(h.db.Model(&model.OtherInStock{})).Count(&total)
+	applyOtherInStockFilters(h.db.Model(&model.OtherInStock{}), companyID, &req).Count(&total)
 
 	var list []OtherInStockListResp
-	if err := applyFilters(h.db.Model(&model.OtherInStock{})).
-		Select(`other_in_stocks.*,
-			COALESCE(w.name, '') AS warehouse_name,
-			COALESCE(op.name, '') AS operator_name,
-			COALESCE(hd.name, '') AS handler_name,
-			COALESCE(d.name, '') AS dept_name`).
-		Joins("LEFT JOIN warehouses w ON w.id = other_in_stocks.warehouse_id").
-		Joins("LEFT JOIN employees op ON op.id = other_in_stocks.operator_id").
-		Joins("LEFT JOIN employees hd ON hd.id = other_in_stocks.handler_id").
-		Joins("LEFT JOIN departments d ON d.id = other_in_stocks.dept_id").
+	if err := h.withNames(applyOtherInStockFilters(h.db.Model(&model.OtherInStock{}), companyID, &req)).
 		Order("other_in_stocks.created_at DESC").
 		Offset((req.Page - 1) * req.PageSize).Limit(req.PageSize).
 		Scan(&list).Error; err != nil {
@@ -175,6 +186,7 @@ type OtherInStockSaveReq struct {
 	SettleUnit  string               `json:"settleUnit"`
 	HandlerID   uint                 `json:"handlerId"`
 	DeptID      uint                 `json:"deptId"`
+	BusinessManagerID uint           `json:"businessManagerId"`
 	Remark      string               `json:"remark"`
 	Items       []OtherInStockItemReq `json:"items" binding:"required,min=1,dive"`
 	Complete    bool                 `json:"complete"` // true=保存并过账
@@ -235,6 +247,7 @@ func (h *OtherInStockHandler) Create(c *gin.Context) {
 		SettleUnit:           req.SettleUnit,
 		HandlerID:            req.HandlerID,
 		DeptID:               req.DeptID,
+		BusinessManagerID:    req.BusinessManagerID,
 		Status:               "draft",
 		OperatorID:           middleware.GetUserID(c),
 		Remark:               req.Remark,
@@ -312,6 +325,7 @@ func (h *OtherInStockHandler) Update(c *gin.Context) {
 	bill.SettleUnit = req.SettleUnit
 	bill.HandlerID = req.HandlerID
 	bill.DeptID = req.DeptID
+	bill.BusinessManagerID = req.BusinessManagerID
 	bill.Remark = req.Remark
 
 	if err := h.db.Transaction(func(tx *gorm.DB) error {

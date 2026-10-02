@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -53,6 +54,14 @@ func (h *InventoryHandler) RegisterRoutes(r *gin.RouterGroup) {
 		iw.PUT("/:id", h.UpdateWarning)
 		iw.DELETE("/:id", h.DeleteWarning)
 	}
+}
+
+// genDailyBillNo 生成 XX-YYYYMMDD-0001 格式的单号（按日递增）
+func genDailyBillNo(tx *gorm.DB, table, prefix string) string {
+	p := prefix + time.Now().Format("20060102") + "-"
+	var count int64
+	tx.Table(table).Where("bill_no LIKE ?", p+"%").Count(&count)
+	return fmt.Sprintf("%s%04d", p, count+1)
 }
 
 // ==================== 库存盘点 ====================
@@ -150,12 +159,10 @@ func (h *InventoryHandler) CreateCheck(c *gin.Context) {
 	}
 
 	billDate, _ := time.Parse("2006-01-02", req.BillDate)
-	billNo := generateOrderNo("IC")
 
 	check := model.InventoryCheck{
 		BaseModelWithCompany: model.BaseModelWithCompany{CompanyID: companyID},
 		WarehouseID:          req.WarehouseID,
-		BillNo:               billNo,
 		BillDate:             billDate,
 		Status:               "pending",
 		OperatorID:           middleware.GetUserID(c),
@@ -182,6 +189,7 @@ func (h *InventoryHandler) CreateCheck(c *gin.Context) {
 	}
 
 	if err := h.db.Transaction(func(tx *gorm.DB) error {
+		check.BillNo = genDailyBillNo(tx, "inventory_checks", "PD-")
 		if err := tx.Create(&check).Error; err != nil {
 			return err
 		}
@@ -326,8 +334,95 @@ func (h *InventoryHandler) CompleteCheck(c *gin.Context) {
 		if err := tx.Save(&check).Error; err != nil {
 			return err
 		}
+
+		// 盘盈生成"盘点报溢"其他入库单，盘亏生成"盘亏出库"其他出库单
+		remark := "库存盘点: " + check.BillNo
+		var overItems, lossItems []model.InventoryCheckItem
 		for _, item := range check.Items {
-			if item.DiffQty != 0 {
+			if item.DiffQty > 0 {
+				overItems = append(overItems, item)
+			} else if item.DiffQty < 0 {
+				lossItems = append(lossItems, item)
+			}
+		}
+
+		if len(overItems) > 0 {
+			inBill := model.OtherInStock{
+				BaseModelWithCompany: model.BaseModelWithCompany{CompanyID: companyID},
+				WarehouseID:          check.WarehouseID,
+				BillNo:               genDailyBillNo(tx, "other_in_stocks", "QR-"),
+				BillDate:             check.BillDate,
+				InType:               "盘点报溢",
+				HandlerID:            check.OperatorID,
+				Status:               "completed",
+				OperatorID:           check.OperatorID,
+				Remark:               remark,
+			}
+			items := make([]model.OtherInStockItem, len(overItems))
+			for i, item := range overItems {
+				itemAmount := item.DiffQty * item.Price
+				inBill.Amount += itemAmount
+				inBill.TotalQty += item.DiffQty
+				items[i] = model.OtherInStockItem{
+					ProductID: item.ProductID,
+					Quantity:  item.DiffQty,
+					Price:     item.Price,
+					Amount:    itemAmount,
+					Remark:    item.Remark,
+				}
+			}
+			if err := tx.Create(&inBill).Error; err != nil {
+				return err
+			}
+			for i := range items {
+				items[i].InStockID = inBill.ID
+			}
+			if err := tx.Create(&items).Error; err != nil {
+				return err
+			}
+			for _, item := range overItems {
+				if err := database.ChangeStock(tx, companyID, check.WarehouseID, item.ProductID, item.DiffQty); err != nil {
+					return err
+				}
+			}
+		}
+
+		if len(lossItems) > 0 {
+			outBill := model.OtherOutStock{
+				BaseModelWithCompany: model.BaseModelWithCompany{CompanyID: companyID},
+				WarehouseID:          check.WarehouseID,
+				BillNo:               genDailyBillNo(tx, "other_out_stocks", "QC-"),
+				BillDate:             check.BillDate,
+				OutType:              "盘亏出库",
+				HandlerID:            check.OperatorID,
+				Status:               "completed",
+				OperatorID:           check.OperatorID,
+				Remark:               remark,
+			}
+			items := make([]model.OtherOutStockItem, len(lossItems))
+			for i, item := range lossItems {
+				qty := -item.DiffQty
+				itemAmount := qty * item.Price
+				outBill.Amount += itemAmount
+				outBill.TotalQty += qty
+				items[i] = model.OtherOutStockItem{
+					ProductID: item.ProductID,
+					Quantity:  qty,
+					Price:     item.Price,
+					Amount:    itemAmount,
+					Remark:    item.Remark,
+				}
+			}
+			if err := tx.Create(&outBill).Error; err != nil {
+				return err
+			}
+			for i := range items {
+				items[i].OutStockID = outBill.ID
+			}
+			if err := tx.Create(&items).Error; err != nil {
+				return err
+			}
+			for _, item := range lossItems {
 				if err := database.ChangeStock(tx, companyID, check.WarehouseID, item.ProductID, item.DiffQty); err != nil {
 					return err
 				}

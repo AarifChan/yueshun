@@ -42,6 +42,8 @@ definitions:
     properties:
       billDate:
         type: string
+      businessManagerId:
+        type: integer
       complete:
         description: true=保存并过账
         type: boolean
@@ -430,6 +432,84 @@ paths:
           schema:
             $ref: '#/definitions/response.Response'
       summary: 其他入库单过账
+      tags:
+      - 库存
+  /other-in-stocks/export:
+    get:
+      parameters:
+      - description: 单号
+        in: query
+        name: keyword
+        type: string
+      - description: 商品名称/编号
+        in: query
+        name: productKw
+        type: string
+      - description: 入库仓库
+        in: query
+        name: warehouseId
+        type: integer
+      - description: 状态 draft/completed
+        in: query
+        name: status
+        type: string
+      - description: 入库类型
+        in: query
+        name: inType
+        type: string
+      - description: 录单时间起 YYYY-MM-DD
+        in: query
+        name: startDate
+        type: string
+      - description: 录单时间止 YYYY-MM-DD
+        in: query
+        name: endDate
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+      summary: 导出其他入库单列表 Excel
+      tags:
+      - 库存
+  /other-in-stocks/export/items:
+    get:
+      parameters:
+      - description: 单号
+        in: query
+        name: keyword
+        type: string
+      - description: 商品名称/编号
+        in: query
+        name: productKw
+        type: string
+      - description: 入库仓库
+        in: query
+        name: warehouseId
+        type: integer
+      - description: 状态 draft/completed
+        in: query
+        name: status
+        type: string
+      - description: 入库类型
+        in: query
+        name: inType
+        type: string
+      - description: 录单时间起 YYYY-MM-DD
+        in: query
+        name: startDate
+        type: string
+      - description: 录单时间止 YYYY-MM-DD
+        in: query
+        name: endDate
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+      summary: 导出其他入库单明细 Excel
       tags:
       - 库存
   /other-out-stocks:

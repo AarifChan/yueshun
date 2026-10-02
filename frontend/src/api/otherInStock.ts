@@ -40,6 +40,8 @@ export interface OtherInStock {
   handlerName?: string
   deptId: number
   deptName?: string
+  businessManagerId?: number
+  businessManagerName?: string
   totalQty: number
   amount: number
   status: string
@@ -69,6 +71,7 @@ export interface OtherInStockSavePayload {
   settleUnit?: string
   handlerId?: number
   deptId?: number
+  businessManagerId?: number
   remark?: string
   items: { productId: number; quantity: number; price: number; remark?: string }[]
   complete: boolean
@@ -98,4 +101,12 @@ export function completeOtherInStock(id: number) {
   return api.put(`/api/v1/other-in-stocks/${id}/complete`)
 }
 
-export const OTHER_IN_TYPES = ['报溢入库', '盘盈入库', '期初入库', '其他入库']
+export function exportOtherInStocks(params: OtherInStockListQuery) {
+  return api.get('/api/v1/other-in-stocks/export', { params, responseType: 'blob' })
+}
+
+export function exportOtherInStockItems(params: OtherInStockListQuery) {
+  return api.get('/api/v1/other-in-stocks/export/items', { params, responseType: 'blob' })
+}
+
+export const OTHER_IN_TYPES = ['盘点报溢', '报溢入库', '盘盈入库', '期初入库', '其他入库']

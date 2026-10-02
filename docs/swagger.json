@@ -333,6 +333,126 @@
                 }
             }
         },
+        "/other-in-stocks/export": {
+            "get": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "导出其他入库单列表 Excel",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "单号",
+                        "name": "keyword",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "商品名称/编号",
+                        "name": "productKw",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "入库仓库",
+                        "name": "warehouseId",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "状态 draft/completed",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "入库类型",
+                        "name": "inType",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "录单时间起 YYYY-MM-DD",
+                        "name": "startDate",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "录单时间止 YYYY-MM-DD",
+                        "name": "endDate",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    }
+                }
+            }
+        },
+        "/other-in-stocks/export/items": {
+            "get": {
+                "tags": [
+                    "库存"
+                ],
+                "summary": "导出其他入库单明细 Excel",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "单号",
+                        "name": "keyword",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "商品名称/编号",
+                        "name": "productKw",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "入库仓库",
+                        "name": "warehouseId",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "状态 draft/completed",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "入库类型",
+                        "name": "inType",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "录单时间起 YYYY-MM-DD",
+                        "name": "startDate",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "录单时间止 YYYY-MM-DD",
+                        "name": "endDate",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    }
+                }
+            }
+        },
         "/other-in-stocks/{id}": {
             "get": {
                 "tags": [
@@ -871,6 +991,9 @@
             "properties": {
                 "billDate": {
                     "type": "string"
+                },
+                "businessManagerId": {
+                    "type": "integer"
                 },
                 "complete": {
                     "description": "true=保存并过账",

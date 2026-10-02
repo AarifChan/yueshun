@@ -3,6 +3,15 @@
     <div class="page-header">
       <h2 class="page-title">其他入库单列表</h2>
       <div class="page-actions">
+        <el-dropdown trigger="click" @command="handleExport">
+          <el-button><el-icon><Download /></el-icon>导出<el-icon><ArrowDown /></el-icon></el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="list">导出列表</el-dropdown-item>
+              <el-dropdown-item command="items">导出明细</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
         <el-button type="primary" @click="goCreate"><el-icon><Plus /></el-icon>新增入库单</el-button>
       </div>
     </div>
@@ -127,6 +136,12 @@
       <el-table-column prop="operatorName" label="制单人" width="100">
         <template #default="{ row }">{{ row.operatorName || '-' }}</template>
       </el-table-column>
+      <el-table-column prop="handlerName" label="经手人" width="100">
+        <template #default="{ row }">{{ row.handlerName || '-' }}</template>
+      </el-table-column>
+      <el-table-column prop="businessManagerName" label="业务经理" width="100">
+        <template #default="{ row }">{{ row.businessManagerName || '-' }}</template>
+      </el-table-column>
       <el-table-column prop="remark" label="备注" min-width="120" show-overflow-tooltip>
         <template #default="{ row }">{{ row.remark || '-' }}</template>
       </el-table-column>
@@ -169,14 +184,17 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowDown, More, Plus, Search, Setting } from '@element-plus/icons-vue'
+import { ArrowDown, Download, More, Plus, Search, Setting } from '@element-plus/icons-vue'
 import RemoteSelect from '@/components/RemoteSelect.vue'
 import {
   OTHER_IN_TYPES,
   completeOtherInStock,
   deleteOtherInStock,
+  exportOtherInStockItems,
+  exportOtherInStocks,
   fetchOtherInStocks,
   type OtherInStock,
+  type OtherInStockListQuery,
 } from '@/api/otherInStock'
 
 const router = useRouter()
@@ -295,19 +313,26 @@ function loadFilterConfs() {
 }
 
 // ---- 列表 ----
+function buildQuery(): OtherInStockListQuery {
+  const params: OtherInStockListQuery = {}
+  if (filters.keyword) params.keyword = filters.keyword
+  if (filters.productKw) params.productKw = filters.productKw
+  if (filters.warehouseId) params.warehouseId = filters.warehouseId
+  if (filters.status) params.status = filters.status
+  if (filters.inType) params.inType = filters.inType
+  if (dateRange.value?.[0]) params.startDate = dateRange.value[0]
+  if (dateRange.value?.[1]) params.endDate = dateRange.value[1]
+  return params
+}
+
 async function fetchList() {
   loading.value = true
   try {
-    const params: Record<string, any> = { page: pagination.page, pageSize: pagination.pageSize }
-    if (filters.keyword) params.keyword = filters.keyword
-    if (filters.productKw) params.productKw = filters.productKw
-    if (filters.warehouseId) params.warehouseId = filters.warehouseId
-    if (filters.status) params.status = filters.status
-    if (filters.inType) params.inType = filters.inType
-    if (dateRange.value?.[0]) params.startDate = dateRange.value[0]
-    if (dateRange.value?.[1]) params.endDate = dateRange.value[1]
-
-    const res = await fetchOtherInStocks(params)
+    const res = await fetchOtherInStocks({
+      ...buildQuery(),
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    })
     if (res.data.code === 0 || res.data.code === 200) {
       list.value = res.data.data?.list ?? []
       total.value = res.data.data?.total ?? 0
@@ -316,6 +341,31 @@ async function fetchList() {
     // 拦截器已提示
   } finally {
     loading.value = false
+  }
+}
+
+// ---- 导出 ----
+const exporting = ref(false)
+
+async function handleExport(cmd: string) {
+  if (exporting.value) return
+  exporting.value = true
+  try {
+    const isList = cmd === 'list'
+    const res = isList
+      ? await exportOtherInStocks(buildQuery())
+      : await exportOtherInStockItems(buildQuery())
+    const filename = `其他入库单${isList ? '列表' : '明细'}_${dayjs().format('YYYYMMDD')}.xlsx`
+    const url = URL.createObjectURL(new Blob([res.data]))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch {
+    // 拦截器已提示
+  } finally {
+    exporting.value = false
   }
 }
 

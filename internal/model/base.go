@@ -786,6 +786,7 @@ type OtherInStock struct {
 	SettleUnit  string            `json:"settleUnit" gorm:"size:128"`             // 结算单位
 	HandlerID   uint              `json:"handlerId" gorm:"index"`                 // 经手人
 	DeptID      uint              `json:"deptId" gorm:"index"`                    // 部门
+	BusinessManagerID uint       `json:"businessManagerId" gorm:"index"`         // 业务经理
 	TotalQty    float64           `json:"totalQty" gorm:"type:decimal(18,4);default:0"`
 	Amount      float64           `json:"amount" gorm:"type:decimal(18,4);default:0"`
 	Status      string            `json:"status" gorm:"size:20;default:draft;comment:draft草稿 completed已过账"`
