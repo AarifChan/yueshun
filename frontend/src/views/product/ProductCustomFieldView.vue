@@ -5,8 +5,17 @@
       <el-button type="primary" @click="openDialog()">新增商品字段</el-button>
     </div>
     <el-card>
-      <el-table :data="list" v-loading="loading" border stripe>
+      <div class="filter-bar">
+        <el-input v-model="keyword" placeholder="字段名称" clearable class="filter-input" />
+      </div>
+      <el-table :data="filteredList" v-loading="loading" border stripe>
         <el-table-column prop="sort" label="排序" width="70" align="right" />
+        <el-table-column label="操作" width="130">
+          <template #default="{ row }">
+            <el-button link type="primary" @click="openDialog(row)">编辑</el-button>
+            <el-button link type="danger" @click="remove(row)">删除</el-button>
+          </template>
+        </el-table-column>
         <el-table-column prop="name" label="字段名称" min-width="140" />
         <el-table-column label="字段类型" width="110">
           <template #default="{ row }">{{ typeLabel(row.fieldType) }}</template>
@@ -26,12 +35,6 @@
           <template #default="{ row }">{{ row.showInList ? '是' : '否' }}</template>
         </el-table-column>
         <el-table-column prop="description" label="字段说明" min-width="150" show-overflow-tooltip />
-        <el-table-column label="操作" width="130" fixed="right">
-          <template #default="{ row }">
-            <el-button link type="primary" @click="openDialog(row)">编辑</el-button>
-            <el-button link type="danger" @click="remove(row)">删除</el-button>
-          </template>
-        </el-table-column>
         <template #empty>暂无数据</template>
       </el-table>
     </el-card>
@@ -67,7 +70,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '@/api/client'
 
@@ -84,8 +87,15 @@ const emptyForm: Field = {
 
 const list = ref<Field[]>([])
 const loading = ref(false)
+const keyword = ref('')
 const dialogVisible = ref(false)
 const form = ref<Field>({ ...emptyForm })
+
+const filteredList = computed(() => {
+  const kw = keyword.value.trim()
+  if (!kw) return list.value
+  return list.value.filter((f) => f.name.includes(kw))
+})
 
 function typeLabel(t: string) {
   return t === 'number' ? '数字' : t === 'date' ? '日期' : t === 'select' ? '下拉选择' : '文本'
@@ -137,4 +147,6 @@ onMounted(load)
 .page { display: flex; flex-direction: column; gap: 12px; }
 .page-header { display: flex; justify-content: space-between; align-items: center; }
 .page-title { font-size: 18px; font-weight: 600; margin: 0; }
+.filter-bar { margin-bottom: 12px; }
+.filter-input { width: 240px; }
 </style>

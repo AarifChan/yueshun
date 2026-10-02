@@ -3,6 +3,10 @@
     <div class="page-header">
       <h2 class="page-title">商品审核</h2>
     </div>
+    <el-tabs model-value="self" class="audit-tabs">
+      <el-tab-pane label="自建商品审核" name="self" />
+    </el-tabs>
+    <el-alert type="info" :closable="false" show-icon title="已审核商品修改后进入待审核" class="audit-tip" />
     <el-card>
       <el-form inline @submit.prevent>
         <el-form-item label="审核状态">
@@ -100,4 +104,6 @@ onMounted(() => load(1))
 .page { display: flex; flex-direction: column; gap: 12px; }
 .page-header { display: flex; justify-content: space-between; align-items: center; }
 .page-title { font-size: 18px; font-weight: 600; margin: 0; }
+.audit-tabs :deep(.el-tabs__header) { margin-bottom: 0; }
+.audit-tip { margin-top: 12px; }
 </style>

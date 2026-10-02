@@ -2,7 +2,10 @@
   <div class="page">
     <div class="page-header">
       <h2 class="page-title">规格单位条码</h2>
-      <el-button @click="exportCsv('规格单位条码', exportCols)">导出</el-button>
+      <div class="actions">
+        <el-button :disabled="!selectedRows.length" @click="exportSelectedCsv('规格单位条码', exportCols, selectedRows)">导出选中</el-button>
+        <el-button @click="exportCsv('规格单位条码', exportCols)">导出</el-button>
+      </div>
     </div>
     <el-card>
       <el-form inline @submit.prevent>
@@ -14,7 +17,8 @@
           <el-button @click="reset">重置</el-button>
         </el-form-item>
       </el-form>
-      <el-table :data="list" v-loading="loading" border stripe>
+      <el-table :data="list" v-loading="loading" border stripe @selection-change="(rows: Row[]) => (selectedRows = rows)">
+        <el-table-column type="selection" width="45" />
         <el-table-column prop="code" label="商品编号" width="110" />
         <el-table-column prop="name" label="商品名称" min-width="180" show-overflow-tooltip />
         <el-table-column prop="spec" label="规格" width="120" />
@@ -53,8 +57,10 @@ interface Row {
   id: number; code: string; barcode: string; name: string; spec: string; unit: string
 }
 
-const { list, total, loading, page, pageSize, filters, load, search, reset, exportCsv } =
+const { list, total, loading, page, pageSize, filters, load, search, reset, exportCsv, exportSelectedCsv } =
   useReport<Row>('/api/v1/product-barcodes', { keyword: '' })
+
+const selectedRows = ref<Row[]>([])
 
 const exportCols = [
   { key: 'code', label: '商品编号' },
@@ -90,6 +96,7 @@ onMounted(() => load(1))
 .page { display: flex; flex-direction: column; gap: 12px; }
 .page-header { display: flex; justify-content: space-between; align-items: center; }
 .page-title { font-size: 18px; font-weight: 600; margin: 0; }
+.actions { display: flex; gap: 8px; }
 .barcode-view, .barcode-edit { display: flex; align-items: center; gap: 8px; }
 .empty { color: #909399; }
 </style>

@@ -3,6 +3,7 @@
     <div class="page-header">
       <h2 class="page-title">客户单独定价</h2>
       <div class="actions">
+        <el-button :disabled="!selectedRows.length" @click="exportSelectedCsv('客户单独定价', exportCols, selectedRows)">导出选中</el-button>
         <el-button @click="exportCsv('客户单独定价', exportCols)">导出</el-button>
         <el-button type="primary" @click="openDialog()">新增定价</el-button>
       </div>
@@ -10,17 +11,30 @@
     <el-card>
       <el-form inline @submit.prevent>
         <el-form-item label="客户">
-          <el-input v-model="filters.customerKeyword" placeholder="客户名称/编号" clearable style="width: 180px" />
+          <el-input v-model="filters.customerKeyword" placeholder="客户名称/编号/联系人/手机号" clearable style="width: 220px" />
         </el-form-item>
         <el-form-item label="商品">
           <el-input v-model="filters.productKeyword" placeholder="商品名称/编号" clearable style="width: 180px" />
+        </el-form-item>
+        <el-form-item label="商品分类">
+          <el-tree-select
+            v-model="filters.categoryId"
+            :data="categoryTree"
+            :props="{ label: 'name', children: 'children' }"
+            node-key="id"
+            check-strictly
+            clearable
+            placeholder="商品分类"
+            style="width: 160px"
+          />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="search">查询</el-button>
           <el-button @click="reset">重置</el-button>
         </el-form-item>
       </el-form>
-      <el-table :data="list" v-loading="loading" border stripe>
+      <el-table :data="list" v-loading="loading" border stripe @selection-change="(rows: Row[]) => (selectedRows = rows)">
+        <el-table-column type="selection" width="45" />
         <el-table-column prop="customerCode" label="客户编号" width="110" />
         <el-table-column prop="customer" label="客户名称" min-width="150" show-overflow-tooltip />
         <el-table-column prop="productCode" label="商品编号" width="110" />
@@ -81,6 +95,7 @@ import { onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '@/api/client'
 import { useReport } from '@/composables/useReport'
+import { fetchCategoryTree, type CategoryNode } from '@/api/category'
 
 interface Row {
   id: number; customerId: number; customer: string; customerCode: string
@@ -90,8 +105,20 @@ interface Row {
 
 interface Option { id: number; name: string; code?: string }
 
-const { list, total, loading, page, pageSize, filters, load, search, reset, exportCsv } =
-  useReport<Row>('/api/v1/customer-prices', { customerKeyword: '', productKeyword: '' })
+const { list, total, loading, page, pageSize, filters, load, search, reset, exportCsv, exportSelectedCsv } =
+  useReport<Row>('/api/v1/customer-prices', { customerKeyword: '', productKeyword: '', categoryId: undefined })
+
+const selectedRows = ref<Row[]>([])
+const categoryTree = ref<CategoryNode[]>([])
+
+async function loadCategoryTree() {
+  try {
+    const res = await fetchCategoryTree()
+    if (res.data.code === 0 || res.data.code === 200) {
+      categoryTree.value = Array.isArray(res.data.data) ? res.data.data : []
+    }
+  } catch { /* 选项加载失败不阻塞列表 */ }
+}
 
 const exportCols = [
   { key: 'customerCode', label: '客户编号' },
@@ -156,7 +183,10 @@ async function remove(row: Row) {
   }
 }
 
-onMounted(() => load(1))
+onMounted(() => {
+  load(1)
+  loadCategoryTree()
+})
 </script>
 
 <style scoped>

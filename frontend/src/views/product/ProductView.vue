@@ -3,6 +3,8 @@
     <div class="page-header">
       <h2 class="page-title">商品信息列表</h2>
       <div class="page-actions">
+        <el-button :disabled="!selectedRows.length" @click="handleExportSelected">导出选中</el-button>
+        <el-button :loading="exporting" @click="handleExportAll">导出</el-button>
         <el-button @click="openImport">商品导入</el-button>
         <el-button type="primary" @click="goCreate"><el-icon><Plus /></el-icon>新增商品</el-button>
       </div>
@@ -98,6 +100,7 @@
           row-key="id"
           :expand-row-keys="expandedKeys"
           @sort-change="handleSortChange"
+          @selection-change="(rows: ProductListItem[]) => (selectedProducts = rows)"
         >
           <el-table-column type="expand" width="1" class-name="expand-content-col">
             <template #default="{ row }">
@@ -184,7 +187,7 @@
             </template>
           </el-table-column>
         </el-table>
-        <el-table v-else :data="specList" v-loading="loading" border stripe height="100%">
+        <el-table v-else :data="specList" v-loading="loading" border stripe height="100%" @selection-change="(rows: SpecListItem[]) => (selectedSpecs = rows)">
           <el-table-column type="selection" width="45" />
           <el-table-column label="商品图片" width="80">
             <template #default="{ row }">
@@ -399,6 +402,7 @@ import {
 import { fetchCategoryTree, type CategoryNode } from '@/api/category'
 import { fetchTags, type ProductTag } from '@/api/tag'
 import { fetchBrandOptions, fetchProduct, fetchTopicCategories } from '@/api/productDetail'
+import { downloadCsv, type CsvColumn } from '@/utils/csvExport'
 import SideTreePanel from '@/components/SideTreePanel.vue'
 
 const router = useRouter()
@@ -536,6 +540,7 @@ const ALL_COLUMNS: ColumnDef[] = [
   { key: 'status', label: '商品状态', width: 90 },
   { key: 'weight', label: '商品重量(kg)', minWidth: 110 },
   { key: 'volume', label: '商品体积(m³)', minWidth: 110 },
+  { key: 'supplier', label: '默认供应商', minWidth: 110 },
 ]
 
 const COLUMN_SETTING_KEY = 'productList.columnConfig'
@@ -587,6 +592,7 @@ function cellText(key: string, row: ProductListItem): string {
     case 'createdAt': return row.createdAt ? row.createdAt.slice(0, 10) : '-'
     case 'shelfStatus': return row.status === 1 ? '已启用' : '已禁用'
     case 'status': return row.status === 1 ? '已启用' : '已禁用'
+    case 'supplier': return row.supplierName || '-'
     default: return '-'
   }
 }
@@ -906,6 +912,82 @@ async function fetchList() {
 function handleSearch() {
   pagination.page = 1
   fetchList()
+}
+
+// ==================== 导出 ====================
+
+const selectedProducts = ref<ProductListItem[]>([])
+const selectedSpecs = ref<SpecListItem[]>([])
+const exporting = ref(false)
+
+const selectedRows = computed(() => (mode.value === 'product' ? selectedProducts.value : selectedSpecs.value))
+
+/** 导出列 = 页面实际展示的列（按商品模式跟随列设置，按规格模式跟随表格固定列） */
+const productExportCols = computed<CsvColumn[]>(() => visibleColumns.value.map((c) => ({ key: c.key, label: c.label })))
+
+const SPEC_EXPORT_COLS: CsvColumn[] = [
+  { key: 'productImage', label: '商品图片' },
+  { key: 'productName', label: '商品名称' },
+  { key: 'specValue', label: '规格值' },
+  { key: 'code', label: '商品编号' },
+  { key: 'barcode', label: '规格条码' },
+  { key: 'brandName', label: '商品品牌' },
+  { key: 'onShelf', label: '上架' },
+]
+
+/** 导出单元格取值与页面显示保持一致 */
+function exportProductCell(key: string, row: ProductListItem): string {
+  if (key === 'image') return row.image || ''
+  if (key === 'name') return row.name || '-'
+  if (key === 'spec') return `${row.specCount ?? 0}种`
+  return cellText(key, row)
+}
+
+function exportSpecCell(key: string, row: SpecListItem): string {
+  switch (key) {
+    case 'productImage': return row.productImage || ''
+    case 'barcode': return row.barcode || '-'
+    case 'brandName': return row.brandName || '-'
+    case 'onShelf': return row.onShelf === 1 ? '是' : '否'
+    default: {
+      const v = row[key as keyof SpecListItem]
+      return v === undefined || v === null || v === '' ? '-' : String(v)
+    }
+  }
+}
+
+const exportFileName = computed(() => (mode.value === 'product' ? '商品信息列表' : '商品规格列表'))
+
+/** 导出当前筛选条件下的全部数据 */
+async function handleExportAll() {
+  exporting.value = true
+  try {
+    const params = { ...buildParams(), page: 1, pageSize: 10000 }
+    const res = mode.value === 'product' ? await fetchProducts(params) : await fetchSpecItems(params)
+    if (res.data.code === 0 || res.data.code === 200) {
+      const data = res.data.data
+      const rows = Array.isArray(data) ? data : (data?.list ?? [])
+      const ok = mode.value === 'product'
+        ? downloadCsv(exportFileName.value, productExportCols.value, rows, exportProductCell)
+        : downloadCsv(exportFileName.value, SPEC_EXPORT_COLS, rows, exportSpecCell)
+      if (!ok) ElMessage.warning('没有可导出的数据')
+    }
+  } finally {
+    exporting.value = false
+  }
+}
+
+/** 只导出勾选的行 */
+function handleExportSelected() {
+  if (!selectedRows.value.length) {
+    ElMessage.warning('请先勾选要导出的行')
+    return
+  }
+  if (mode.value === 'product') {
+    downloadCsv(exportFileName.value, productExportCols.value, selectedProducts.value, exportProductCell)
+  } else {
+    downloadCsv(exportFileName.value, SPEC_EXPORT_COLS, selectedSpecs.value, exportSpecCell)
+  }
 }
 
 function handleModeChange() {
