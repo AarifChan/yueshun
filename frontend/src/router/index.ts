@@ -28,6 +28,12 @@ const router = createRouter({
           component: () => import('@/views/DashboardView.vue'),
           meta: { title: '首页', icon: 'HomeFilled' },
         },
+        {
+          path: 'bill-center',
+          name: 'BillCenter',
+          component: () => import('@/views/bill/BillCenterView.vue'),
+          meta: { title: '单据中心', icon: 'Tickets' },
+        },
         // 基础资料
         {
           path: '',
