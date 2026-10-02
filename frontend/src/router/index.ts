@@ -571,6 +571,38 @@ const router = createRouter({
               component: () => import('@/views/purchase/PaymentView.vue'),
               meta: { title: '采购付款', icon: 'CreditCard' },
             },
+            // 采购策略
+            {
+              path: 'purchase-replenish',
+              name: 'PurchaseReplenish',
+              component: () => import('@/views/purchase/report/ReplenishView.vue'),
+              meta: { title: '智能补货', icon: 'MagicStick' },
+            },
+            // 采购报表
+            {
+              path: 'purchase-reports/product-stats',
+              name: 'PurchaseProductStats',
+              component: () => import('@/views/purchase/report/ProductStatsView.vue'),
+              meta: { title: '商品采购统计', icon: 'DataAnalysis' },
+            },
+            {
+              path: 'purchase-reports/supplier-stats',
+              name: 'PurchaseSupplierStats',
+              component: () => import('@/views/purchase/report/SupplierStatsView.vue'),
+              meta: { title: '供应商采购统计', icon: 'DataAnalysis' },
+            },
+            {
+              path: 'purchase-reports/product-detail',
+              name: 'PurchaseProductDetail',
+              component: () => import('@/views/purchase/report/ProductDetailView.vue'),
+              meta: { title: '商品采购明细统计', icon: 'DataAnalysis' },
+            },
+            {
+              path: 'purchase-reports/order-execution',
+              name: 'PurchaseOrderExecution',
+              component: () => import('@/views/purchase/report/OrderExecutionView.vue'),
+              meta: { title: '采购订单执行明细', icon: 'DataAnalysis' },
+            },
           ],
         },
         // 销售管理
