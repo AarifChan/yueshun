@@ -720,6 +720,101 @@ const router = createRouter({
               component: () => import('@/views/warehouse/IncomeExpenseView.vue'),
               meta: { title: '收支项目', icon: 'Money' },
             },
+            // 资金单据
+            {
+              path: 'expense-bills',
+              name: 'ExpenseBills',
+              component: () => import('@/views/finance/ExpenseBillView.vue'),
+              meta: { title: '费用单', icon: 'Document' },
+            },
+            {
+              path: 'other-income-bills',
+              name: 'OtherIncomeBills',
+              component: () => import('@/views/finance/OtherIncomeBillView.vue'),
+              meta: { title: '其他收入单', icon: 'Document' },
+            },
+            // 往来报表
+            {
+              path: 'finance/receivable',
+              name: 'FinanceReceivable',
+              component: () => import('@/views/finance/ReceivableView.vue'),
+              meta: { title: '应收查询', icon: 'DataAnalysis' },
+            },
+            {
+              path: 'finance/payable',
+              name: 'FinancePayable',
+              component: () => import('@/views/finance/PayableView.vue'),
+              meta: { title: '应付查询', icon: 'DataAnalysis' },
+            },
+            {
+              path: 'finance/balance',
+              name: 'FinanceBalance',
+              component: () => import('@/views/finance/BalanceView.vue'),
+              meta: { title: '往来余额查询', icon: 'DataAnalysis' },
+            },
+            {
+              path: 'finance/customer-advance',
+              name: 'FinanceCustomerAdvance',
+              component: () => import('@/views/finance/CustomerAdvanceView.vue'),
+              meta: { title: '客户预收查询', icon: 'DataAnalysis' },
+            },
+            {
+              path: 'finance/brand-advance',
+              name: 'FinanceBrandAdvance',
+              component: () => import('@/views/finance/BrandPlaceholderView.vue'),
+              props: { title: '品牌预收查询' },
+              meta: { title: '品牌预收查询', icon: 'DataAnalysis' },
+            },
+            {
+              path: 'finance/brand-unsettled',
+              name: 'FinanceBrandUnsettled',
+              component: () => import('@/views/finance/BrandPlaceholderView.vue'),
+              props: { title: '品牌待结算查询' },
+              meta: { title: '品牌待结算查询', icon: 'DataAnalysis' },
+            },
+            {
+              path: 'finance/unsettled-bills',
+              name: 'FinanceUnsettledBills',
+              component: () => import('@/views/finance/UnsettledBillsView.vue'),
+              meta: { title: '单据待结算查询', icon: 'DataAnalysis' },
+            },
+            // 统计报表
+            {
+              path: 'finance/cash-bank',
+              name: 'FinanceCashBank',
+              component: () => import('@/views/finance/CashBankView.vue'),
+              meta: { title: '现金银行账户统计', icon: 'DataAnalysis' },
+            },
+            {
+              path: 'finance/account-income',
+              name: 'FinanceAccountIncome',
+              component: () => import('@/views/finance/AccountIncomeView.vue'),
+              meta: { title: '账户收支统计', icon: 'DataAnalysis' },
+            },
+            {
+              path: 'finance/revenue-expense',
+              name: 'FinanceRevenueExpense',
+              component: () => import('@/views/finance/RevenueExpenseView.vue'),
+              meta: { title: '收入费用统计', icon: 'DataAnalysis' },
+            },
+            {
+              path: 'finance/expense-distribution',
+              name: 'FinanceExpenseDistribution',
+              component: () => import('@/views/finance/ExpenseDistributionView.vue'),
+              meta: { title: '费用支出分布', icon: 'DataAnalysis' },
+            },
+            {
+              path: 'finance/income-distribution',
+              name: 'FinanceIncomeDistribution',
+              component: () => import('@/views/finance/IncomeDistributionView.vue'),
+              meta: { title: '其他收入分布', icon: 'DataAnalysis' },
+            },
+            {
+              path: 'finance/operating-profit',
+              name: 'FinanceOperatingProfit',
+              component: () => import('@/views/finance/OperatingProfitView.vue'),
+              meta: { title: '经营利润统计', icon: 'DataAnalysis' },
+            },
           ],
         },
         // 商城管理

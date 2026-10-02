@@ -290,6 +290,8 @@ func autoMigrate(db *gorm.DB) error {
 		&model.AssemblyOrderItem{},
 		&model.StockBatch{},
 		&model.CommissionPlan{},
+		&model.ExpenseBill{},
+		&model.OtherIncomeBill{},
 	); err != nil {
 		return err
 	}
