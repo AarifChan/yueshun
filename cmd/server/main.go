@@ -299,6 +299,16 @@ func autoMigrate(db *gorm.DB) error {
 		&model.CustomFieldDef{},
 		&model.SalesPlan{},
 		&model.CustomerProductPrice{},
+		&model.Promotion{},
+		&model.Coupon{},
+		&model.CouponGrant{},
+		&model.PointRule{},
+		&model.PointFlow{},
+		&model.PointExchange{},
+		&model.Distributor{},
+		&model.DistributorWithdrawal{},
+		&model.StoredValueRule{},
+		&model.StoredValueRecord{},
 	); err != nil {
 		return err
 	}

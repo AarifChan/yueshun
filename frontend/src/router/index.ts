@@ -975,6 +975,105 @@ const router = createRouter({
             },
           ],
         },
+        // 营销
+        {
+          path: '',
+          name: 'GroupMarketing',
+          component: RouterView,
+          meta: {
+            title: '营销',
+            icon: 'Present',
+            mega: [
+              {
+                title: '商品促销', icon: 'Present',
+                items: [
+                  { title: '限时特价', path: '/marketing/seckill' },
+                  { title: '单品买赠', path: '/marketing/gift' },
+                  { title: '阶梯价', path: '/marketing/tiered-price' },
+                  { title: '组合促销', path: '/marketing/combo' },
+                  { title: '优惠套餐', path: '/marketing/package' },
+                ],
+              },
+              {
+                title: '下单增长', icon: 'TrendCharts',
+                items: [
+                  { title: '整单优惠', path: '/marketing/whole-order' },
+                  { title: '优惠券', path: '/marketing/coupons' },
+                ],
+              },
+              {
+                title: '拓客留客', icon: 'UserFilled',
+                items: [
+                  { title: '积分', path: '/marketing/points' },
+                  { title: '分销', path: '/marketing/distribution' },
+                  { title: '预收款储值', path: '/marketing/stored-value' },
+                ],
+              },
+            ],
+          },
+          children: [
+            {
+              path: 'marketing/seckill',
+              name: 'MarketingSeckill',
+              component: () => import('@/views/marketing/SeckillView.vue'),
+              meta: { title: '限时特价', icon: 'AlarmClock' },
+            },
+            {
+              path: 'marketing/gift',
+              name: 'MarketingGift',
+              component: () => import('@/views/marketing/GiftView.vue'),
+              meta: { title: '单品买赠', icon: 'Present' },
+            },
+            {
+              path: 'marketing/tiered-price',
+              name: 'MarketingTieredPrice',
+              component: () => import('@/views/marketing/TieredPriceView.vue'),
+              meta: { title: '阶梯价', icon: 'Sort' },
+            },
+            {
+              path: 'marketing/combo',
+              name: 'MarketingCombo',
+              component: () => import('@/views/marketing/ComboPromoView.vue'),
+              meta: { title: '组合促销', icon: 'Connection' },
+            },
+            {
+              path: 'marketing/package',
+              name: 'MarketingPackage',
+              component: () => import('@/views/marketing/PackagePromoView.vue'),
+              meta: { title: '优惠套餐', icon: 'Box' },
+            },
+            {
+              path: 'marketing/whole-order',
+              name: 'MarketingWholeOrder',
+              component: () => import('@/views/marketing/WholeOrderView.vue'),
+              meta: { title: '整单优惠', icon: 'Tickets' },
+            },
+            {
+              path: 'marketing/coupons',
+              name: 'MarketingCoupons',
+              component: () => import('@/views/marketing/CouponView.vue'),
+              meta: { title: '优惠券', icon: 'Ticket' },
+            },
+            {
+              path: 'marketing/points',
+              name: 'MarketingPoints',
+              component: () => import('@/views/marketing/PointsView.vue'),
+              meta: { title: '积分', icon: 'Star' },
+            },
+            {
+              path: 'marketing/distribution',
+              name: 'MarketingDistribution',
+              component: () => import('@/views/marketing/DistributionView.vue'),
+              meta: { title: '分销', icon: 'Share' },
+            },
+            {
+              path: 'marketing/stored-value',
+              name: 'MarketingStoredValue',
+              component: () => import('@/views/marketing/StoredValueView.vue'),
+              meta: { title: '预收款储值', icon: 'Wallet' },
+            },
+          ],
+        },
         // 审批管理
         {
           path: '',
