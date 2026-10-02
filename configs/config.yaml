@@ -29,14 +29,6 @@ redis:
   db: 0
   pool_size: 10
 
-# 企业微信扫码登录（需在 企业微信管理后台-应用管理 中创建自建应用）
-wecom:
-  enabled: false            # 配置完整后改为 true
-  corp_id: ""               # 企业ID
-  agent_id: ""              # 自建应用 AgentId
-  secret: ""                # 自建应用 Secret
-  redirect_url: ""          # 授权回调地址，如 https://你的域名/api/v1/auth/wecom/callback
-
 log:
   level: "debug" # debug | info | warn | error
   format: "json" # json | console
@@ -48,3 +40,16 @@ pagination:
 
 upload:
   dir: "./uploads" # 图片上传保存目录
+
+# 企业微信（自建应用）—— 真实值一律用环境变量注入，勿写进仓库（见 docs/wecom-setup.md）
+wecom:
+  corpid: ""
+  agentid: 0
+  secret: ""
+  invite_qr_url: ""
+  redirect_host: ""
+
+# 微信小程序 —— 真实值一律用环境变量注入
+wechat_mp:
+  appid: ""
+  secret: ""

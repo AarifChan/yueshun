@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -67,6 +68,43 @@ func GenerateRefreshToken(userID uint) (string, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(jwtCfg.Secret + "_refresh"))
+}
+
+// GetAccessTTL 返回访问令牌有效期（秒）
+func GetAccessTTL() int {
+	return jwtCfg.AccessTTL
+}
+
+// GetRefreshTTL 返回刷新令牌有效期（秒）
+func GetRefreshTTL() int {
+	return jwtCfg.RefreshTTL
+}
+
+// ParseRefreshToken 解析刷新令牌，返回用户 ID
+func ParseRefreshToken(tokenString string) (uint, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(jwtCfg.Secret + "_refresh"), nil
+	})
+	if err != nil {
+		if err == jwt.ErrTokenExpired {
+			return 0, errors.ErrExpiredToken
+		}
+		return 0, errors.ErrInvalidToken
+	}
+
+	claims, ok := token.Claims.(*jwt.RegisteredClaims)
+	if !ok || !token.Valid {
+		return 0, errors.ErrInvalidToken
+	}
+
+	id, err := strconv.ParseUint(claims.Subject, 10, 64)
+	if err != nil || id == 0 {
+		return 0, errors.ErrInvalidToken
+	}
+	return uint(id), nil
 }
 
 // ParseToken 解析令牌

@@ -22,6 +22,7 @@ api.interceptors.response.use(
     const message = error.response?.data?.message || error.message || '请求失败'
     if (status === 401) {
       localStorage.removeItem('token')
+      localStorage.removeItem('refreshToken')
       localStorage.removeItem('user')
       if (router.currentRoute.value.path !== '/login') {
         router.push('/login')

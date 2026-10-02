@@ -48,7 +48,7 @@
 
 ### 分层与调用链
 ```
-main.go → api.SetupRouter(db, jwtCfg, wecomCfg, uploadDir)
+main.go → api.SetupRouter(db, jwtCfg, wecomCfg, wxmpCfg, uploadDir)
         → handler.XxxHandler{db} → RegisterRoutes(authorized)  // 直接在 Handler 内用 GORM 操作 DB
 ```
 无独立 service/repository 层 —— **业务逻辑写在 Handler 中**，GORM 直接查询 `internal/model` 的模型。新增功能请遵循同一模式，不要引入新分层。
@@ -60,7 +60,7 @@ main.go → api.SetupRouter(db, jwtCfg, wecomCfg, uploadDir)
 - **路由注册**：每个 Handler 实现 `RegisterRoutes(r *gin.RouterGroup)`，在 `router.go` 中集中挂载。
 - **数据库**：启动时 GORM AutoMigrate 自动迁移 + `handler.InitSeedData` 种子数据。改模型即迁移，无独立迁移文件。
 - **API 文档**：swaggo 注解，`make swagger` 重新生成到 `docs/`，运行时访问 `/swagger/index.html`。
-- **企业微信登录**：`handler/wecom.go`，由 `configs/config.yaml` 的 `wecom` 段控制（默认 disabled）。
+- **企业微信/小程序登录**：`handler/auth_wecom.go`（WecomAuthHandler）+ `internal/pkg/wecom`、`internal/pkg/wxmp` 客户端，由 `configs/config.yaml` 的 `wecom`/`wechat_mp` 段控制（留空即未配置，密码登录仅超级管理员可用，其余角色返回 4101 引导扫码）。
 
 ## 四、前端架构约定
 

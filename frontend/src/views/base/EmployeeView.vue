@@ -20,10 +20,17 @@
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }"><el-tag :type="row.status === 1 ? 'success' : 'danger'">{{ row.status === 1 ? '启用' : '禁用' }}</el-tag></template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="企微绑定" width="150">
+          <template #default="{ row }">
+            <el-tag v-if="row.wecomUserId" type="success">{{ row.wecomUserId }}</el-tag>
+            <el-tag v-else type="info">未绑定</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="260" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" @click="goDetail(row.id)">查看</el-button>
             <el-button type="warning" size="small" @click="goEdit(row.id)">编辑</el-button>
+            <el-button v-if="row.wecomUserId" type="warning" size="small" @click="handleUnbindWecom(row)">解绑企微</el-button>
             <el-button type="danger" size="small" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -37,8 +44,10 @@
 import { useRouter } from 'vue-router'
 import { useCrud } from '@/composables/useCrud'
 import RemoteSelect from '@/components/RemoteSelect.vue'
+import api from '@/api/client'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
-interface Employee { id: number; username: string; name: string; phone: string; deptId?: number; deptName?: string; roleId?: number; roleName?: string; status: number; email: string }
+interface Employee { id: number; username: string; name: string; phone: string; deptId?: number; deptName?: string; roleId?: number; roleName?: string; status: number; email: string; wecomUserId?: string }
 
 const router = useRouter()
 const crud = useCrud<Employee>({ baseUrl: '/api/v1/employees', defaultForm: () => ({ status: 1 }) })
@@ -48,6 +57,13 @@ fetchList()
 function goCreate() { router.push('/employees/new') }
 function goDetail(id: number) { router.push(`/employees/${id}`) }
 function goEdit(id: number) { router.push(`/employees/${id}?mode=edit`) }
+
+async function handleUnbindWecom(row: Employee) {
+  await ElMessageBox.confirm(`确认解除「${row.name}」的企业微信绑定？解除后其下次登录将重新按手机号绑定。`, '解绑确认', { type: 'warning' })
+  await api.put(`/api/v1/employees/${row.id}`, { wecomUserId: '' })
+  ElMessage.success('已解绑')
+  fetchList()
+}
 </script>
 
 <style scoped>

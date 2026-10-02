@@ -28,6 +28,11 @@ const (
 	CodeDuplicate       = 4002
 	CodeNotExist        = 4003
 	CodeNoPermission    = 4004
+
+	// 企业微信登录 41xx
+	CodeNeedWecom        = 4101 // 非超管尝试密码登录
+	CodeNotWecomMember   = 4102 // 非企业成员
+	CodeEmpNotRegistered = 4103 // 企业成员但系统未建档
 )
 
 // Success 成功响应
@@ -79,6 +84,11 @@ func OkWithMessage(c *gin.Context, message string, data interface{}) {
 // Fail 返回错误（HTTP 200，业务错误码）
 func Fail(c *gin.Context, code int, message string) {
 	c.JSON(http.StatusOK, Error(code, message))
+}
+
+// FailWithData 失败响应（带附加数据，如引导二维码地址）
+func FailWithData(c *gin.Context, code int, message string, data interface{}) {
+	c.JSON(http.StatusOK, Response{Code: code, Message: message, Data: data})
 }
 
 // BadRequest 返回 400
