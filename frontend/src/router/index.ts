@@ -1187,6 +1187,113 @@ const router = createRouter({
             },
           ],
         },
+        // 设置
+        {
+          path: '',
+          name: 'GroupSetting',
+          component: RouterView,
+          meta: {
+            title: '设置',
+            icon: 'Setting',
+            mega: [
+              {
+                title: '基础设置', icon: 'SetUp',
+                items: [
+                  { title: '基础设置', path: '/setting/basic' },
+                  { title: '采购设置', path: '/setting/purchase' },
+                  { title: '销售设置', path: '/setting/sale' },
+                  { title: '库存设置', path: '/setting/inventory' },
+                ],
+              },
+              {
+                title: '商城与业务', icon: 'Shop',
+                items: [
+                  { title: '商城设置', path: '/setting/mall' },
+                  { title: 'CRM设置', path: '/setting/crm' },
+                  { title: '仓配设置', path: '/setting/warehouse-dist' },
+                  { title: '打印设置', path: '/setting/print' },
+                ],
+              },
+              {
+                title: '企业与权限', icon: 'OfficeBuilding',
+                items: [
+                  { title: '企业设置', path: '/setting/enterprise' },
+                  { title: '应用授权', path: '/setting/app-rights' },
+                  { title: '权限组', path: '/roles' },
+                  { title: '职员权限', path: '/setting/employee-rights' },
+                ],
+              },
+            ],
+          },
+          children: [
+            {
+              path: 'setting/basic',
+              name: 'SettingBasic',
+              component: () => import('@/views/setting/BasicSettingsView.vue'),
+              meta: { title: '基础设置', icon: 'SetUp' },
+            },
+            {
+              path: 'setting/purchase',
+              name: 'SettingPurchase',
+              component: () => import('@/views/setting/PurchaseSettingsView.vue'),
+              meta: { title: '采购设置', icon: 'ShoppingCart' },
+            },
+            {
+              path: 'setting/sale',
+              name: 'SettingSale',
+              component: () => import('@/views/setting/SaleSettingsView.vue'),
+              meta: { title: '销售设置', icon: 'Sell' },
+            },
+            {
+              path: 'setting/inventory',
+              name: 'SettingInventory',
+              component: () => import('@/views/setting/InventorySettingsView.vue'),
+              meta: { title: '库存设置', icon: 'Box' },
+            },
+            {
+              path: 'setting/mall',
+              name: 'SettingMall',
+              component: () => import('@/views/setting/MallSettingsView.vue'),
+              meta: { title: '商城设置', icon: 'Shop' },
+            },
+            {
+              path: 'setting/crm',
+              name: 'SettingCrm',
+              component: () => import('@/views/setting/CrmSettingsView.vue'),
+              meta: { title: 'CRM设置', icon: 'UserFilled' },
+            },
+            {
+              path: 'setting/warehouse-dist',
+              name: 'SettingWarehouseDist',
+              component: () => import('@/views/setting/WarehouseDistSettingsView.vue'),
+              meta: { title: '仓配设置', icon: 'Van' },
+            },
+            {
+              path: 'setting/print',
+              name: 'SettingPrint',
+              component: () => import('@/views/setting/PrintSettingsView.vue'),
+              meta: { title: '打印设置', icon: 'Printer' },
+            },
+            {
+              path: 'setting/enterprise',
+              name: 'SettingEnterprise',
+              component: () => import('@/views/setting/EnterpriseView.vue'),
+              meta: { title: '企业设置', icon: 'OfficeBuilding' },
+            },
+            {
+              path: 'setting/app-rights',
+              name: 'SettingAppRights',
+              component: () => import('@/views/setting/AppRightsView.vue'),
+              meta: { title: '应用授权', icon: 'Key' },
+            },
+            {
+              path: 'setting/employee-rights',
+              name: 'SettingEmployeeRights',
+              component: () => import('@/views/setting/EmployeeRightsView.vue'),
+              meta: { title: '职员权限', icon: 'Lock' },
+            },
+          ],
+        },
         // 详情页（不在菜单显示）
         {
           path: 'employees/:id',

@@ -60,6 +60,7 @@ func SetupRouter(db *gorm.DB, jwtCfg *middleware.JWTConfig, wecomCfg *wecom.Conf
 	marketingHandler := handler.NewMarketingHandler(db)
 	biHandler := handler.NewBIHandler(db)
 	ecosystemHandler := handler.NewEcosystemHandler(db)
+	settingExtHandler := handler.NewSettingExtHandler(db)
 
 	router := gin.New()
 	router.Use(middleware.CORSMiddleware())
@@ -90,6 +91,7 @@ func SetupRouter(db *gorm.DB, jwtCfg *middleware.JWTConfig, wecomCfg *wecom.Conf
 		// 需要认证的路由组
 		authorized := v1.Group("")
 		authorized.Use(middleware.JWTMiddleware())
+		authorized.Use(middleware.OperationLogger(db))
 		{
 			// 基础资料
 			dictHandler.RegisterRoutes(authorized)
@@ -154,6 +156,7 @@ func SetupRouter(db *gorm.DB, jwtCfg *middleware.JWTConfig, wecomCfg *wecom.Conf
 			marketingHandler.RegisterRoutes(authorized)
 			biHandler.RegisterRoutes(authorized)
 			ecosystemHandler.RegisterRoutes(authorized)
+			settingExtHandler.RegisterRoutes(authorized)
 
 			// 文件上传
 			uploadHandler.RegisterRoutes(authorized)
