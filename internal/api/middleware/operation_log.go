@@ -75,4 +75,6 @@ var objectTypeNames = map[string]string{
 	"inventory-checks": "盘点单", "inventory-transfers": "调拨单",
 	"other-in-stocks": "其他入库单", "other-out-stocks": "其他出库单",
 	"mall-orders": "商城订单", "accounts": "现金银行账户",
+	"printers": "打印机", "subject-categories": "专题分类", "product-relations": "关联商品",
+	"employee-permissions": "职员权限", "company-info": "企业信息", "operation-logs": "操作日志",
 }
