@@ -165,6 +165,7 @@ type Product struct {
 	MaxStock       float64 `json:"maxStock" gorm:"type:decimal(18,4);default:0"`
 	Description    string  `json:"description" gorm:"size:500"`
 	Status         int8    `json:"status" gorm:"default:1"`
+	AuditStatus    string  `json:"auditStatus" gorm:"size:20;default:approved;comment:pending待审核 approved已审核"`
 
 	Image                   string  `json:"image" gorm:"size:255"`                 // 商品主图
 	MallName                string  `json:"mallName" gorm:"size:128"`              // 商城展示名称

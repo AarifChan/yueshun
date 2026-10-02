@@ -545,8 +545,14 @@ func (h *CRMExtHandler) OppTemplateDelete(c *gin.Context) {
 
 func (h *CRMExtHandler) CustomFieldList(c *gin.Context) {
 	companyID := middleware.GetCompanyID(c)
+	scope := c.DefaultQuery("scope", "customer")
+	keyword := c.Query("keyword")
+	q := h.db.Where("company_id = ? AND scope = ?", companyID, scope)
+	if keyword != "" {
+		q = q.Where("name ILIKE ?", "%"+keyword+"%")
+	}
 	var list []model.CustomFieldDef
-	h.db.Where("company_id = ?", companyID).Order("sort, id").Find(&list)
+	q.Order("sort, id").Find(&list)
 	response.Ok(c, gin.H{"list": list, "total": len(list)})
 }
 
@@ -559,6 +565,9 @@ func (h *CRMExtHandler) CustomFieldCreate(c *gin.Context) {
 	}
 	f.ID = 0
 	f.CompanyID = companyID
+	if f.Scope == "" {
+		f.Scope = "customer"
+	}
 	if err := h.db.Create(&f).Error; err != nil {
 		response.Fail(c, 4000, "创建失败: "+err.Error())
 		return
@@ -585,6 +594,9 @@ func (h *CRMExtHandler) CustomFieldUpdate(c *gin.Context) {
 	f.Enabled = req.Enabled
 	f.Required = req.Required
 	f.DefaultValue = req.DefaultValue
+	f.ShowInDetail = req.ShowInDetail
+	f.ShowInList = req.ShowInList
+	f.Description = req.Description
 	f.Sort = req.Sort
 	h.db.Save(&f)
 	response.Ok(c, f)

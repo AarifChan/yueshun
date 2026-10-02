@@ -37,7 +37,7 @@ type Config struct {
 		RefreshTTL int    `mapstructure:"refresh_ttl"`
 	} `mapstructure:"jwt"`
 	Database database.Config `mapstructure:"database"`
-	Redis    redis.Config  `mapstructure:"redis"`
+	Redis    redis.Config    `mapstructure:"redis"`
 	Wecom    struct {
 		CorpID       string `mapstructure:"corpid"`
 		AgentID      int    `mapstructure:"agentid"`
@@ -298,6 +298,7 @@ func autoMigrate(db *gorm.DB) error {
 		&model.OpportunityTemplate{},
 		&model.CustomFieldDef{},
 		&model.SalesPlan{},
+		&model.CustomerProductPrice{},
 	); err != nil {
 		return err
 	}

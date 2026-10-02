@@ -137,6 +137,9 @@ const router = createRouter({
                 title: '商品资料', icon: 'Goods',
                 items: [
                   { title: '商品信息', path: '/products' },
+                  { title: '条码打印', path: '/barcode-print' },
+                  { title: '商品审核', path: '/product-audit' },
+                  { title: '规格单位条码', path: '/sku-unit-codes' },
                 ],
               },
               {
@@ -144,6 +147,9 @@ const router = createRouter({
                 items: [
                   { title: '价格体系', path: '/price-levels' },
                   { title: '商品物价管理', path: '/price-manage' },
+                  { title: '客户单独定价', path: '/customer-prices' },
+                  { title: '销售价格跟踪', path: '/sale-price-track' },
+                  { title: '采购价格跟踪', path: '/purchase-price-track' },
                 ],
               },
               {
@@ -155,6 +161,7 @@ const router = createRouter({
                   { title: '商品品牌', path: '/brands' },
                   { title: '商品标签', path: '/product-tags' },
                   { title: '商品销售范围', path: '/product-scopes' },
+                  { title: '商品自定义字段', path: '/product-custom-fields' },
                 ],
               },
             ],
@@ -213,6 +220,48 @@ const router = createRouter({
               name: 'ProductScopes',
               component: () => import('@/views/product/ScopeView.vue'),
               meta: { title: '商品销售范围', icon: 'Position' },
+            },
+            {
+              path: 'barcode-print',
+              name: 'BarcodePrint',
+              component: () => import('@/views/product/BarcodePrintView.vue'),
+              meta: { title: '条码打印', icon: 'Printer' },
+            },
+            {
+              path: 'product-audit',
+              name: 'ProductAudit',
+              component: () => import('@/views/product/ProductAuditView.vue'),
+              meta: { title: '商品审核', icon: 'CircleCheck' },
+            },
+            {
+              path: 'sku-unit-codes',
+              name: 'SkuUnitCodes',
+              component: () => import('@/views/product/SkuUnitCodeView.vue'),
+              meta: { title: '规格单位条码', icon: 'Postcard' },
+            },
+            {
+              path: 'customer-prices',
+              name: 'CustomerPrices',
+              component: () => import('@/views/product/CustomerPriceView.vue'),
+              meta: { title: '客户单独定价', icon: 'Money' },
+            },
+            {
+              path: 'sale-price-track',
+              name: 'SalePriceTrack',
+              component: () => import('@/views/product/SalePriceTrackView.vue'),
+              meta: { title: '销售价格跟踪', icon: 'TrendCharts' },
+            },
+            {
+              path: 'purchase-price-track',
+              name: 'PurchasePriceTrack',
+              component: () => import('@/views/product/PurchasePriceTrackView.vue'),
+              meta: { title: '采购价格跟踪', icon: 'TrendCharts' },
+            },
+            {
+              path: 'product-custom-fields',
+              name: 'ProductCustomFields',
+              component: () => import('@/views/product/ProductCustomFieldView.vue'),
+              meta: { title: '商品自定义字段', icon: 'EditPen' },
             },
           ],
         },

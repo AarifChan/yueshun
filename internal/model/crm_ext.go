@@ -53,15 +53,19 @@ type OpportunityTemplate struct {
 
 func (OpportunityTemplate) TableName() string { return "opportunity_templates" }
 
-// CustomFieldDef 客户自定义字段
+// CustomFieldDef 自定义字段（客户/商品）
 type CustomFieldDef struct {
 	BaseModelWithCompany
+	Scope        string `json:"scope" gorm:"size:20;not null;default:customer;index;comment:customer客户 product商品"`
 	Name         string `json:"name" gorm:"size:64;not null"`
 	FieldType    string `json:"fieldType" gorm:"size:20;not null;default:text;comment:text文本 number数字 date日期 select下拉"`
 	Options      string `json:"options" gorm:"size:500;comment:下拉选项,逗号分隔"`
 	Enabled      bool   `json:"enabled" gorm:"default:true"`
 	Required     bool   `json:"required" gorm:"default:false"`
 	DefaultValue string `json:"defaultValue" gorm:"size:255"`
+	ShowInDetail bool   `json:"showInDetail" gorm:"default:false;comment:显示到详情"`
+	ShowInList   bool   `json:"showInList" gorm:"default:false;comment:显示到列表"`
+	Description  string `json:"description" gorm:"size:500;comment:字段说明"`
 	Sort         int    `json:"sort" gorm:"default:0"`
 }
 
