@@ -292,6 +292,12 @@ func autoMigrate(db *gorm.DB) error {
 		&model.CommissionPlan{},
 		&model.ExpenseBill{},
 		&model.OtherIncomeBill{},
+		&model.SupplierCategory{},
+		&model.WorkReport{},
+		&model.ReportTemplate{},
+		&model.OpportunityTemplate{},
+		&model.CustomFieldDef{},
+		&model.SalesPlan{},
 	); err != nil {
 		return err
 	}

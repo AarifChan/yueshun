@@ -869,6 +869,61 @@ const router = createRouter({
               component: () => import('@/views/crm/ContractView.vue'),
               meta: { title: '合同管理', icon: 'DocumentChecked' },
             },
+            // CRM 增强
+            {
+              path: 'customer-sea',
+              name: 'CustomerSea',
+              component: () => import('@/views/crm/CustomerSeaView.vue'),
+              meta: { title: '客户公海', icon: 'Ship' },
+            },
+            {
+              path: 'work-reports',
+              name: 'WorkReports',
+              component: () => import('@/views/crm/WorkReportView.vue'),
+              meta: { title: '汇报', icon: 'EditPen' },
+            },
+            {
+              path: 'customer-tags',
+              name: 'CustomerTags',
+              component: () => import('@/views/crm/CustomerTagView.vue'),
+              meta: { title: '客户标签', icon: 'PriceTag' },
+            },
+            {
+              path: 'supplier-categories',
+              name: 'SupplierCategories',
+              component: () => import('@/views/crm/SupplierCategoryView.vue'),
+              meta: { title: '供应商分类', icon: 'Files' },
+            },
+            {
+              path: 'custom-fields',
+              name: 'CustomFields',
+              component: () => import('@/views/crm/CustomFieldView.vue'),
+              meta: { title: '客户自定义字段', icon: 'Operation' },
+            },
+            {
+              path: 'report-templates',
+              name: 'ReportTemplates',
+              component: () => import('@/views/crm/ReportTemplateView.vue'),
+              meta: { title: '汇报模板', icon: 'Document' },
+            },
+            {
+              path: 'approval-templates',
+              name: 'ApprovalTemplates',
+              component: () => import('@/views/approval/ProcessView.vue'),
+              meta: { title: '审批模板', icon: 'Stamp' },
+            },
+            {
+              path: 'opportunity-settings',
+              name: 'OpportunitySettings',
+              component: () => import('@/views/crm/OpportunitySettingView.vue'),
+              meta: { title: '商机设置', icon: 'SetUp' },
+            },
+            {
+              path: 'sales-plans',
+              name: 'SalesPlans',
+              component: () => import('@/views/crm/SalesPlanView.vue'),
+              meta: { title: '业务驾驶舱设置', icon: 'Odometer' },
+            },
           ],
         },
         // 审批管理

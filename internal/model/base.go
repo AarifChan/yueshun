@@ -321,11 +321,12 @@ type CustomerTag struct {
 // Supplier 供应商
 type Supplier struct {
 	BaseModelWithCompany
-	Name    string `json:"name" gorm:"size:64;not null"`
-	Code    string `json:"code" gorm:"size:64"`
-	Contact string `json:"contact" gorm:"size:64"`
-	Phone   string `json:"phone" gorm:"size:32"`
-	Status  int8   `json:"status" gorm:"default:1"`
+	CategoryID uint   `json:"categoryId" gorm:"index;default:0"`
+	Name       string `json:"name" gorm:"size:64;not null"`
+	Code       string `json:"code" gorm:"size:64"`
+	Contact    string `json:"contact" gorm:"size:64"`
+	Phone      string `json:"phone" gorm:"size:32"`
+	Status     int8   `json:"status" gorm:"default:1"`
 }
 
 // CustomerLevel 客户等级
@@ -357,6 +358,15 @@ type Customer struct {
 	CreditDays  int        `json:"creditDays" gorm:"default:0"`                     // 账期天数
 	Balance     float64    `json:"balance" gorm:"type:decimal(18,4);default:0"`     // 欠款余额（正=欠款）
 	LastOrderAt *time.Time `json:"lastOrderAt" gorm:"index"`                        // 最近下单时间
+	// 客户公海
+	SeaStatus         string     `json:"seaStatus" gorm:"size:10;default:private;comment:private私海 public公海"`
+	OwnerID           uint       `json:"ownerId" gorm:"index;default:0;comment:负责人(业务经理)"`
+	RecycleCount      int        `json:"recycleCount" gorm:"default:0;comment:被回收次数"`
+	ClaimCount        int        `json:"claimCount" gorm:"default:0;comment:被领取/分配次数"`
+	LastRecycleAt     *time.Time `json:"lastRecycleAt"`
+	LastRecycleType   string     `json:"lastRecycleType" gorm:"size:20"`
+	LastRecycleReason string     `json:"lastRecycleReason" gorm:"size:255"`
+	LastClaimAt       *time.Time `json:"lastClaimAt"`
 	TaxNo       string     `json:"taxNo" gorm:"size:64"`                            // 税号
 	BankName    string     `json:"bankName" gorm:"size:128"`
 	BankAccount string     `json:"bankAccount" gorm:"size:64"`
