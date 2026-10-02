@@ -435,6 +435,32 @@ func (h *OtherInStockHandler) Complete(c *gin.Context) {
 			if err := database.ChangeStock(tx, companyID, bill.WarehouseID, item.ProductID, item.Quantity); err != nil {
 				return err
 			}
+			// 批次台账：填写了批号的入库行生成/累加批次
+			if item.BatchNo != "" {
+				var expiry *time.Time
+				if item.ProduceDate != nil && item.ShelfLifeDays > 0 {
+					t := item.ProduceDate.AddDate(0, 0, item.ShelfLifeDays)
+					expiry = &t
+				}
+				inDate := bill.BillDate
+				var batch model.StockBatch
+				err := tx.Where("company_id = ? AND product_id = ? AND warehouse_id = ? AND batch_no = ?",
+					companyID, item.ProductID, bill.WarehouseID, item.BatchNo).First(&batch).Error
+				if err != nil {
+					batch = model.StockBatch{
+						ProductID: item.ProductID, WarehouseID: bill.WarehouseID, BatchNo: item.BatchNo,
+						Quantity: item.Quantity, CostPrice: item.Price,
+						ProduceDate: item.ProduceDate, ExpiryDate: expiry, ShelfLifeDays: item.ShelfLifeDays,
+						InDate: &inDate,
+					}
+					batch.CompanyID = companyID
+					if cerr := tx.Create(&batch).Error; cerr != nil {
+						return cerr
+					}
+				} else if uerr := tx.Model(&batch).UpdateColumn("quantity", gorm.Expr("quantity + ?", item.Quantity)).Error; uerr != nil {
+					return uerr
+				}
+			}
 		}
 		return nil
 	}); err != nil {

@@ -477,22 +477,55 @@ const router = createRouter({
               component: () => import('@/views/inventory/AssemblyOrderDetailView.vue'),
               meta: { title: '组装拆装单详情', hidden: true },
             },
-            // 尚未实现的库存功能入口（菜单可见，页面开发中）
-            ...([
-              ['inventory/stock-distribution', 'InventoryStockDistribution', '库存分布表'],
-              ['inventory/inout-summary', 'InventoryInoutSummary', '商品进销存汇总'],
-              ['inventory/transfer-summary', 'InventoryTransferSummary', '调拨汇总表'],
-              ['inventory/other-inout-stats', 'InventoryOtherInoutStats', '其他出入库统计'],
-              ['inventory/batch-stats', 'InventoryBatchStats', '库存批号统计'],
-              ['inventory/batch-trace', 'InventoryBatchTrace', '批号跟踪详情'],
-              ['inventory/expiry-warning', 'InventoryExpiryWarning', '商品近效期预警'],
-              ['inventory/inout-flow', 'InventoryInoutFlow', '商品出入库流水'],
-            ] as const).map(([path, name, title]) => ({
-              path,
-              name,
-              component: () => import('@/views/inventory/ComingSoonView.vue'),
-              meta: { title, icon: 'Document' },
-            })),
+            // 库存报表
+            {
+              path: 'inventory/stock-distribution',
+              name: 'InventoryStockDistribution',
+              component: () => import('@/views/inventory/StockDistributionView.vue'),
+              meta: { title: '库存分布表', icon: 'Document' },
+            },
+            {
+              path: 'inventory/inout-summary',
+              name: 'InventoryInoutSummary',
+              component: () => import('@/views/inventory/InoutSummaryView.vue'),
+              meta: { title: '商品进销存汇总', icon: 'Document' },
+            },
+            {
+              path: 'inventory/transfer-summary',
+              name: 'InventoryTransferSummary',
+              component: () => import('@/views/inventory/TransferSummaryView.vue'),
+              meta: { title: '调拨汇总表', icon: 'Document' },
+            },
+            {
+              path: 'inventory/other-inout-stats',
+              name: 'InventoryOtherInoutStats',
+              component: () => import('@/views/inventory/OtherInoutStatsView.vue'),
+              meta: { title: '其他出入库统计', icon: 'Document' },
+            },
+            {
+              path: 'inventory/batch-stats',
+              name: 'InventoryBatchStats',
+              component: () => import('@/views/inventory/BatchStatsView.vue'),
+              meta: { title: '库存批号统计', icon: 'Document' },
+            },
+            {
+              path: 'inventory/batch-trace',
+              name: 'InventoryBatchTrace',
+              component: () => import('@/views/inventory/BatchTraceView.vue'),
+              meta: { title: '批号跟踪详情', icon: 'Document' },
+            },
+            {
+              path: 'inventory/expiry-warning',
+              name: 'InventoryExpiryWarning',
+              component: () => import('@/views/inventory/ExpiryWarningView.vue'),
+              meta: { title: '商品近效期预警', icon: 'Document' },
+            },
+            {
+              path: 'inventory/inout-flow',
+              name: 'InventoryInoutFlow',
+              component: () => import('@/views/inventory/InoutFlowView.vue'),
+              meta: { title: '商品出入库流水', icon: 'Document' },
+            },
           ],
         },
         // 采购管理

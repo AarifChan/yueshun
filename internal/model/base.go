@@ -800,13 +800,16 @@ type OtherInStock struct {
 // OtherInStockItem 其他入库单明细
 type OtherInStockItem struct {
 	BaseModel
-	InStockID uint    `json:"inStockId" gorm:"index;not null"`
-	ProductID uint    `json:"productId" gorm:"index;not null"`
-	Quantity  float64 `json:"quantity" gorm:"type:decimal(18,4);default:0"`
-	Price     float64 `json:"price" gorm:"type:decimal(18,4);default:0"`
-	Amount    float64 `json:"amount" gorm:"type:decimal(18,4);default:0"`
-	Remark    string  `json:"remark" gorm:"size:255"`
-	Product   Product `json:"product" gorm:"foreignKey:ProductID"`
+	InStockID     uint       `json:"inStockId" gorm:"index;not null"`
+	ProductID     uint       `json:"productId" gorm:"index;not null"`
+	Quantity      float64    `json:"quantity" gorm:"type:decimal(18,4);default:0"`
+	Price         float64    `json:"price" gorm:"type:decimal(18,4);default:0"`
+	Amount        float64    `json:"amount" gorm:"type:decimal(18,4);default:0"`
+	BatchNo       string     `json:"batchNo" gorm:"size:64;index"`
+	ProduceDate   *time.Time `json:"produceDate" gorm:"type:date"`
+	ShelfLifeDays int        `json:"shelfLifeDays" gorm:"default:0"`
+	Remark        string     `json:"remark" gorm:"size:255"`
+	Product       Product    `json:"product" gorm:"foreignKey:ProductID"`
 }
 
 // OtherOutStock 其他出库单
