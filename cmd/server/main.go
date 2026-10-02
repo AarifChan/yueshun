@@ -289,6 +289,7 @@ func autoMigrate(db *gorm.DB) error {
 		&model.AssemblyOrder{},
 		&model.AssemblyOrderItem{},
 		&model.StockBatch{},
+		&model.CommissionPlan{},
 	); err != nil {
 		return err
 	}

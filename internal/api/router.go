@@ -52,6 +52,7 @@ func SetupRouter(db *gorm.DB, jwtCfg *middleware.JWTConfig, wecomCfg *wecom.Conf
 	transferExtHandler := handler.NewTransferExtHandler(db)
 	inventoryReportHandler := handler.NewInventoryReportHandler(db)
 	billCenterHandler := handler.NewBillCenterHandler(db)
+	saleReportHandler := handler.NewSaleReportHandler(db)
 
 	router := gin.New()
 	router.Use(middleware.CORSMiddleware())
@@ -138,6 +139,7 @@ func SetupRouter(db *gorm.DB, jwtCfg *middleware.JWTConfig, wecomCfg *wecom.Conf
 			transferExtHandler.RegisterRoutes(authorized)
 					inventoryReportHandler.RegisterRoutes(authorized)
 			billCenterHandler.RegisterRoutes(authorized)
+			saleReportHandler.RegisterRoutes(authorized)
 
 			// 文件上传
 			uploadHandler.RegisterRoutes(authorized)

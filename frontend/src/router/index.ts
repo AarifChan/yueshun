@@ -604,6 +604,69 @@ const router = createRouter({
               component: () => import('@/views/sale/ReceiptView.vue'),
               meta: { title: '销售收款', icon: 'Money' },
             },
+            // 销售对账
+            {
+              path: 'sale-reports/daily-summary',
+              name: 'SaleDailySummary',
+              component: () => import('@/views/sale/report/DailySummaryView.vue'),
+              meta: { title: '日销售统计', icon: 'DataAnalysis' },
+            },
+            {
+              path: 'sale-reports/daily-close',
+              name: 'SaleDailyClose',
+              component: () => import('@/views/sale/report/DailyCloseView.vue'),
+              meta: { title: '日清日结', icon: 'DataAnalysis' },
+            },
+            // 销售报表
+            {
+              path: 'sale-reports/product-stats',
+              name: 'SaleProductStats',
+              component: () => import('@/views/sale/report/ProductStatsView.vue'),
+              meta: { title: '商品销售统计', icon: 'DataAnalysis' },
+            },
+            {
+              path: 'sale-reports/customer-stats',
+              name: 'SaleCustomerStats',
+              component: () => import('@/views/sale/report/CustomerStatsView.vue'),
+              meta: { title: '客户销售统计', icon: 'DataAnalysis' },
+            },
+            {
+              path: 'sale-reports/employee-stats',
+              name: 'SaleEmployeeStats',
+              component: () => import('@/views/sale/report/EmployeeStatsView.vue'),
+              meta: { title: '职员销售业绩统计', icon: 'DataAnalysis' },
+            },
+            {
+              path: 'sale-reports/product-detail',
+              name: 'SaleProductDetail',
+              component: () => import('@/views/sale/report/ProductDetailStatsView.vue'),
+              meta: { title: '商品销售明细统计', icon: 'DataAnalysis' },
+            },
+            {
+              path: 'sale-reports/order-execution',
+              name: 'SaleOrderExecution',
+              component: () => import('@/views/sale/report/OrderExecutionView.vue'),
+              meta: { title: '销售订单执行明细', icon: 'DataAnalysis' },
+            },
+            {
+              path: 'sale-reports/comprehensive',
+              name: 'SaleComprehensive',
+              component: () => import('@/views/sale/report/ComprehensiveView.vue'),
+              meta: { title: '订销退综合分析', icon: 'DataAnalysis' },
+            },
+            // 销售提成
+            {
+              path: 'commission-plans',
+              name: 'CommissionPlans',
+              component: () => import('@/views/sale/report/CommissionPlanView.vue'),
+              meta: { title: '提成方案列表', icon: 'SetUp' },
+            },
+            {
+              path: 'commission-stats',
+              name: 'CommissionStats',
+              component: () => import('@/views/sale/report/CommissionStatsView.vue'),
+              meta: { title: '职员提成统计', icon: 'DataAnalysis' },
+            },
           ],
         },
         // 资金管理
