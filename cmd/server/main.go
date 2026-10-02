@@ -276,6 +276,19 @@ func autoMigrate(db *gorm.DB) error {
 		&model.InitialStock{},
 		&model.InitialBalance{},
 		&model.InitialAccountBalance{},
+		// 库存扩展模块
+		&model.CostAdjust{},
+		&model.CostAdjustItem{},
+		&model.TransferApply{},
+		&model.TransferApplyItem{},
+		&model.TransferOut{},
+		&model.TransferOutItem{},
+		&model.TransferIn{},
+		&model.TransferInItem{},
+		&model.AssemblyTemplate{},
+		&model.AssemblyOrder{},
+		&model.AssemblyOrderItem{},
+		&model.StockBatch{},
 	); err != nil {
 		return err
 	}

@@ -423,6 +423,8 @@ type Stock struct {
 	WarehouseID uint    `json:"warehouseId" gorm:"index;not null;uniqueIndex:uniq_stock_wh_product,priority:2"`
 	ProductID   uint    `json:"productId" gorm:"index;not null;uniqueIndex:uniq_stock_wh_product,priority:3"`
 	Quantity    float64 `json:"quantity" gorm:"type:decimal(18,4);default:0"`
+	CostPrice   float64 `json:"costPrice" gorm:"type:decimal(18,4);default:0;comment:成本均价"`
+	Amount      float64 `json:"amount" gorm:"type:decimal(18,4);default:0;comment:库存金额"`
 }
 
 func (Stock) TableName() string {
