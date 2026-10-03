@@ -218,6 +218,7 @@ func autoMigrate(db *gorm.DB) error {
 		&model.Region{},
 		&model.CustomerLevel{},
 		&model.CustomerTag{},
+		&model.CustomerTagRelation{},
 		&model.Customer{},
 		&model.Supplier{},
 		// 仓库/资金
@@ -231,6 +232,7 @@ func autoMigrate(db *gorm.DB) error {
 		// 价格体系
 		&model.PriceLevel{},
 		&model.ProductPrice{},
+		&model.ProductPriceTrack{},
 		// 采购模块
 		&model.PurchaseOrder{},
 		&model.PurchaseOrderItem{},

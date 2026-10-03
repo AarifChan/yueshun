@@ -23,6 +23,10 @@ export interface ProductListItem {
   totalStock?: number
   createdAt?: string
   mallSortWeight?: number
+  searchKeywords?: string
+  salesQty?: number
+  weight?: number
+  volume?: number
   warehouseName?: string
   supplierName?: string
 }
@@ -101,4 +105,9 @@ export async function importProductsCustom(file: File, overwriteEmpty: boolean) 
   fd.append('file', await ensureXlsxFile(file))
   fd.append('overwriteEmpty', overwriteEmpty ? '1' : '0')
   return api.post('/api/v1/products/import/custom', fd)
+}
+
+/** 批量更新商品排序权重 / 搜索关键词（商品排序设置、完善搜索关键词） */
+export function batchUpdateProductFields(items: { id: number; mallSortWeight?: number; searchKeywords?: string }[]) {
+  return api.put('/api/v1/products/batch-fields', { items })
 }

@@ -137,9 +137,9 @@ const router = createRouter({
                 title: '商品资料', icon: 'Goods',
                 items: [
                   { title: '商品信息', path: '/products' },
-                  { title: '条码打印', path: '/barcode-print' },
-                  { title: '商品审核', path: '/product-audit' },
                   { title: '规格单位条码', path: '/sku-unit-codes' },
+                  { title: '条码打印', path: '/barcode-print' },
+                  { title: '商品自定义字段', path: '/product-custom-fields' },
                 ],
               },
               {
@@ -161,7 +161,7 @@ const router = createRouter({
                   { title: '商品品牌', path: '/brands' },
                   { title: '商品标签', path: '/product-tags' },
                   { title: '商品销售范围', path: '/product-scopes' },
-                  { title: '商品自定义字段', path: '/product-custom-fields' },
+                  { title: '商品审核', path: '/product-audit' },
                 ],
               },
             ],

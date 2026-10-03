@@ -72,11 +72,14 @@ func (h *PriceHandler) ListPriceLevels(c *gin.Context) {
 
 func (h *PriceHandler) CreatePriceLevel(c *gin.Context) {
 	var req struct {
-		Name        string `json:"name" binding:"required,max=64"`
-		Code        string `json:"code" binding:"max=64"`
-		Description string `json:"description" binding:"max=255"`
-		IsDefault   bool   `json:"isDefault"`
-		Status      int8   `json:"status" binding:"oneof=0 1"`
+		Name          string `json:"name" binding:"required,max=64"`
+		Code          string `json:"code" binding:"max=64"`
+		Description   string `json:"description" binding:"max=255"`
+		IsDefault     bool   `json:"isDefault"`
+		Required      bool   `json:"required"`
+		Rule          string `json:"rule" binding:"max=255"`
+		CustomerScope string `json:"customerScope" binding:"max=255"`
+		Status        int8   `json:"status" binding:"oneof=0 1"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "请求参数错误")
@@ -94,6 +97,9 @@ func (h *PriceHandler) CreatePriceLevel(c *gin.Context) {
 		Code:                 req.Code,
 		Description:          req.Description,
 		IsDefault:            req.IsDefault,
+		Required:             req.Required,
+		Rule:                 req.Rule,
+		CustomerScope:        req.CustomerScope,
 		Status:               req.Status,
 	}
 	if err := h.db.Create(&level).Error; err != nil {
@@ -111,11 +117,14 @@ func (h *PriceHandler) UpdatePriceLevel(c *gin.Context) {
 		return
 	}
 	var req struct {
-		Name        string `json:"name" binding:"max=64"`
-		Code        string `json:"code" binding:"max=64"`
-		Description string `json:"description" binding:"max=255"`
-		IsDefault   bool   `json:"isDefault"`
-		Status      int8   `json:"status" binding:"oneof=0 1"`
+		Name          string `json:"name" binding:"max=64"`
+		Code          string `json:"code" binding:"max=64"`
+		Description   string `json:"description" binding:"max=255"`
+		IsDefault     bool   `json:"isDefault"`
+		Required      bool   `json:"required"`
+		Rule          string `json:"rule" binding:"max=255"`
+		CustomerScope string `json:"customerScope" binding:"max=255"`
+		Status        int8   `json:"status" binding:"oneof=0 1"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "请求参数错误")
@@ -137,6 +146,9 @@ func (h *PriceHandler) UpdatePriceLevel(c *gin.Context) {
 	}
 	level.Description = req.Description
 	level.IsDefault = req.IsDefault
+	level.Required = req.Required
+	level.Rule = req.Rule
+	level.CustomerScope = req.CustomerScope
 	level.Status = req.Status
 
 	if err := h.db.Save(&level).Error; err != nil {

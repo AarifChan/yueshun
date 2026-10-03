@@ -447,11 +447,34 @@ func (Stock) TableName() string {
 // PriceLevel 价格体系
 type PriceLevel struct {
 	BaseModelWithCompany
-	Name        string `json:"name" gorm:"size:64;not null"`
-	Code        string `json:"code" gorm:"size:64;index"`
-	Description string `json:"description" gorm:"size:255"`
-	IsDefault   bool   `json:"isDefault" gorm:"default:false"`
-	Status      int8   `json:"status" gorm:"default:1"`
+	Name          string `json:"name" gorm:"size:64;not null"`
+	Code          string `json:"code" gorm:"size:64;index"`
+	Description   string `json:"description" gorm:"size:255"`
+	IsDefault     bool   `json:"isDefault" gorm:"default:false"`
+	Required      bool   `json:"required" gorm:"default:false"`            // 是否必填（必设级别价）
+	Rule          string `json:"rule" gorm:"size:255"`                     // 级别价规则说明
+	CustomerScope string `json:"customerScope" gorm:"size:255"`            // 适用客户说明
+	Status        int8   `json:"status" gorm:"default:1"`
+}
+
+// CustomerTagRelation 客户-标签关联
+type CustomerTagRelation struct {
+	BaseModelWithCompany
+	CustomerID uint `json:"customerId" gorm:"index;not null"`
+	TagID      uint `json:"tagId" gorm:"index;not null"`
+}
+
+// ProductPriceTrack 手动新增的价格跟踪记录（销售/采购）
+type ProductPriceTrack struct {
+	BaseModelWithCompany
+	Type       string  `json:"type" gorm:"size:16;index;not null;comment:sale销售 purchase采购"`
+	CustomerID uint    `json:"customerId" gorm:"index;default:0"`
+	SupplierID uint    `json:"supplierId" gorm:"index;default:0"`
+	ProductID  uint    `json:"productId" gorm:"index;not null"`
+	Price      float64 `json:"price" gorm:"type:decimal(18,4);default:0"`
+	Quantity   float64 `json:"quantity" gorm:"type:decimal(18,4);default:0"`
+	TrackDate  string  `json:"trackDate" gorm:"size:10"` // YYYY-MM-DD
+	Remark     string  `json:"remark" gorm:"size:255"`
 }
 
 // ProductPrice 商品价格矩阵

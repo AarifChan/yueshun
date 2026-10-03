@@ -5,6 +5,8 @@
       <div class="page-actions">
         <el-button :disabled="!selectedRows.length" @click="handleExportSelected">导出选中</el-button>
         <el-button :loading="exporting" @click="handleExportAll">导出</el-button>
+        <el-button @click="openSortDialog">商品排序设置</el-button>
+        <el-button @click="openKeywordDialog">完善搜索关键词</el-button>
         <el-button @click="openImport">商品导入</el-button>
         <el-button type="primary" @click="goCreate"><el-icon><Plus /></el-icon>新增商品</el-button>
       </div>
@@ -41,7 +43,7 @@
         </el-radio-group>
         <div class="filter-row">
           <div class="filter-cell" :style="filterCellStyle(keywordFilterConf)">
-            <el-input v-model="filters.keyword" placeholder="商品名称/编号/条码" clearable @keyup.enter="handleSearch" />
+            <el-input v-model="filters.keyword" placeholder="名称/编号/条码/规格/关键字" clearable @keyup.enter="handleSearch" />
           </div>
           <div v-for="conf in shownFilterConfs" :key="conf.key" class="filter-cell" :style="filterCellStyle(conf)">
             <el-input v-if="conf.key === 'name'" v-model="filters.name" placeholder="请输入商品名称" clearable @keyup.enter="handleSearch" />
@@ -315,6 +317,40 @@
       </template>
     </el-dialog>
 
+    <el-dialog v-model="sortDialogVisible" title="商品排序设置" width="720px" :close-on-click-modal="false">
+      <el-table :data="sortRows" border size="small" max-height="420">
+        <el-table-column prop="code" label="商品编号" width="120"><template #default="{ row }">{{ row.code || '-' }}</template></el-table-column>
+        <el-table-column prop="name" label="商品名称" min-width="180" show-overflow-tooltip />
+        <el-table-column label="排序权重" width="160">
+          <template #default="{ row }">
+            <el-input-number v-model="row.mallSortWeight" :min="0" :max="999999" size="small" controls-position="right" style="width: 130px" />
+          </template>
+        </el-table-column>
+        <template #empty>暂无数据</template>
+      </el-table>
+      <template #footer>
+        <el-button @click="sortDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="sortSaving" @click="saveSortWeights">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="keywordDialogVisible" title="完善搜索关键词" width="720px" :close-on-click-modal="false">
+      <el-table :data="keywordRows" border size="small" max-height="420">
+        <el-table-column prop="code" label="商品编号" width="120"><template #default="{ row }">{{ row.code || '-' }}</template></el-table-column>
+        <el-table-column prop="name" label="商品名称" min-width="160" show-overflow-tooltip />
+        <el-table-column label="搜索关键词" min-width="200">
+          <template #default="{ row }">
+            <el-input v-model="row.searchKeywords" size="small" maxlength="255" placeholder="多个关键词用逗号分隔" />
+          </template>
+        </el-table-column>
+        <template #empty>暂无数据</template>
+      </el-table>
+      <template #footer>
+        <el-button @click="keywordDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="keywordSaving" @click="saveSearchKeywords">保存</el-button>
+      </template>
+    </el-dialog>
+
     <el-dialog v-model="importVisible" title="商品导入" width="560px" :close-on-click-modal="false" @closed="resetImport">
       <div v-if="importStep === 1" class="import-modes">
         <div
@@ -395,6 +431,7 @@ import {
   importProductsCustom,
   fetchSettings,
   saveSettings,
+  batchUpdateProductFields,
   type ProductListItem,
   type SpecListItem,
   type ImportResult,
@@ -413,7 +450,7 @@ const loading = ref(false)
 const productList = ref<ProductListItem[]>([])
 const specList = ref<SpecListItem[]>([])
 const total = ref(0)
-const pagination = reactive({ page: 1, pageSize: 100 })
+const pagination = reactive({ page: 1, pageSize: 30 })
 const filters = reactive<{ keyword: string; name: string; categoryId?: number; brandId?: number; tagId?: number; topicCategory: string; stockStatus: string; hasImage: number | ''; status: number | '' }>({
   keyword: '',
   name: '',
@@ -544,7 +581,11 @@ const ALL_COLUMNS: ColumnDef[] = [
 ]
 
 const COLUMN_SETTING_KEY = 'productList.columnConfig'
-const DEFAULT_COLUMNS = ['image', 'code', 'barcode', 'name', 'spec', 'brand', 'tag']
+const DEFAULT_COLUMNS = [
+  'image', 'code', 'barcode', 'name', 'spec', 'brand', 'tag',
+  'unit', 'purchasePrice', 'defaultPrice', 'retailPrice', 'salesQty',
+  'totalStock', 'shelfStatus', 'sortWeight', 'weight', 'volume', 'supplier',
+]
 const DEFAULT_FREEZE = 2
 
 const columnKeys = ref<string[]>([...DEFAULT_COLUMNS])
@@ -571,6 +612,12 @@ function fmtPrice(v?: number) {
   return v === undefined || v === null ? '-' : v.toFixed(2)
 }
 
+/** 数值显示：去掉多余的小数零，空值返回 0（销量/重量/体积必须有真实值） */
+function fmtQty(v?: number | null): string {
+  if (v === undefined || v === null) return '0'
+  return String(Number(v.toFixed(4)))
+}
+
 function cellText(key: string, row: ProductListItem): string {
   switch (key) {
     case 'code': return row.code || '-'
@@ -586,12 +633,15 @@ function cellText(key: string, row: ProductListItem): string {
     case 'defaultPrice': return fmtPrice(row.defaultPrice)
     case 'retailPrice': return fmtPrice(row.retailPrice)
     case 'warehouse': return row.warehouseName || '-'
+    case 'salesQty': return fmtQty(row.salesQty)
     case 'sortWeight': return row.mallSortWeight === undefined || row.mallSortWeight === null ? '-' : String(row.mallSortWeight)
     case 'remark': return row.description || '-'
     case 'totalStock': return row.totalStock === undefined || row.totalStock === null ? '-' : String(row.totalStock)
     case 'createdAt': return row.createdAt ? row.createdAt.slice(0, 10) : '-'
     case 'shelfStatus': return row.status === 1 ? '已启用' : '已禁用'
     case 'status': return row.status === 1 ? '已启用' : '已禁用'
+    case 'weight': return fmtQty(row.weight)
+    case 'volume': return fmtQty(row.volume)
     case 'supplier': return row.supplierName || '-'
     default: return '-'
   }
@@ -993,6 +1043,61 @@ function handleExportSelected() {
 function handleModeChange() {
   pagination.page = 1
   fetchList()
+}
+
+// ==================== 商品排序设置 / 完善搜索关键词 ====================
+
+const sortDialogVisible = ref(false)
+const keywordDialogVisible = ref(false)
+const sortSaving = ref(false)
+const keywordSaving = ref(false)
+const sortRows = ref<{ id: number; code: string; name: string; mallSortWeight: number }[]>([])
+const keywordRows = ref<{ id: number; code: string; name: string; searchKeywords: string }[]>([])
+
+function openSortDialog() {
+  sortRows.value = productList.value.map((p) => ({ id: p.id, code: p.code, name: p.name, mallSortWeight: p.mallSortWeight ?? 0 }))
+  sortDialogVisible.value = true
+}
+
+function openKeywordDialog() {
+  keywordRows.value = productList.value.map((p) => ({ id: p.id, code: p.code, name: p.name, searchKeywords: p.searchKeywords ?? '' }))
+  keywordDialogVisible.value = true
+}
+
+async function saveSortWeights() {
+  sortSaving.value = true
+  try {
+    const res = await batchUpdateProductFields(sortRows.value.map((r) => ({ id: r.id, mallSortWeight: r.mallSortWeight })))
+    if (res.data.code === 0 || res.data.code === 200) {
+      ElMessage.success('排序权重已保存')
+      sortDialogVisible.value = false
+      fetchList()
+    } else {
+      ElMessage.error(res.data.message || '保存失败')
+    }
+  } catch {
+    // 拦截器已提示
+  } finally {
+    sortSaving.value = false
+  }
+}
+
+async function saveSearchKeywords() {
+  keywordSaving.value = true
+  try {
+    const res = await batchUpdateProductFields(keywordRows.value.map((r) => ({ id: r.id, searchKeywords: r.searchKeywords })))
+    if (res.data.code === 0 || res.data.code === 200) {
+      ElMessage.success('搜索关键词已保存')
+      keywordDialogVisible.value = false
+      fetchList()
+    } else {
+      ElMessage.error(res.data.message || '保存失败')
+    }
+  } catch {
+    // 拦截器已提示
+  } finally {
+    keywordSaving.value = false
+  }
 }
 
 function handleSizeChange(size: number) {

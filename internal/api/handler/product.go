@@ -56,6 +56,7 @@ func (h *ProductHandler) RegisterRoutes(r *gin.RouterGroup) {
 		product.POST("/opening-stock", h.CreateOpeningStock)
 		product.POST("/import/system", h.ImportProductsSystem)
 		product.POST("/import/custom", h.ImportProductsCustom)
+		product.PUT("/batch-fields", h.BatchUpdateProductFields)
 		product.GET("/:id", h.GetProduct)
 		product.PUT("/:id", h.UpdateProduct)
 		product.DELETE("/:id", h.DeleteProduct)
@@ -932,6 +933,9 @@ type ProductResp struct {
 	TotalStock    float64  `json:"totalStock"`
 	SpecCount     int64    `json:"specCount"`
 	DefaultPrice  float64  `json:"defaultPrice"`
+	SalesQty      float64  `json:"salesQty"` // 销量（已完成销售出库累计）
+	Weight        float64  `json:"weight"`   // 商品重量(kg)，取首个规格行
+	Volume        float64  `json:"volume"`   // 商品体积(m³)，取首个规格行
 	Tags          []string `json:"tags"`
 }
 
@@ -949,8 +953,12 @@ func (h *ProductHandler) ListProducts(c *gin.Context) {
 
 	query := h.db.Model(&model.Product{}).Where("products.company_id = ?", companyID)
 	if req.Keyword != "" {
-		query = query.Where("products.name LIKE ? OR products.code LIKE ? OR products.barcode LIKE ? OR products.search_keywords LIKE ?",
-			"%"+req.Keyword+"%", "%"+req.Keyword+"%", "%"+req.Keyword+"%", "%"+req.Keyword+"%")
+		kw := "%" + req.Keyword + "%"
+		query = query.Where(`products.name LIKE ? OR products.code LIKE ? OR products.barcode LIKE ?
+			OR products.specification LIKE ? OR products.search_keywords LIKE ?
+			OR EXISTS (SELECT 1 FROM product_spec_items psi WHERE psi.product_id = products.id AND psi.deleted_at IS NULL
+				AND (psi.spec_value LIKE ? OR psi.code LIKE ? OR psi.barcode LIKE ?))`,
+			kw, kw, kw, kw, kw, kw, kw, kw)
 	}
 	if req.CategoryID > 0 {
 		query = query.Where("products.category_id = ?", req.CategoryID)
@@ -1002,7 +1010,13 @@ func (h *ProductHandler) ListProducts(c *gin.Context) {
 	h.db.Model(&model.PriceLevel{}).Where("company_id = ? AND is_default = ?", companyID, true).Select("id").Scan(&levelID)
 
 	var list []ProductResp
-	query.Select("products.*, product_categories.name as category_name, brands.name as brand_name, warehouses.name as warehouse_name, suppliers.name as supplier_name, (SELECT COALESCE(SUM(stocks.quantity),0) FROM stocks WHERE stocks.product_id = products.id) as total_stock, (SELECT COUNT(*) FROM product_spec_items WHERE product_spec_items.product_id = products.id AND product_spec_items.deleted_at IS NULL) as spec_count, COALESCE((SELECT product_prices.price FROM product_prices WHERE product_prices.product_id = products.id AND product_prices.unit_id = 0 AND product_prices.level_id = ? AND product_prices.customer_id = 0 LIMIT 1), 0) as default_price", levelID).
+	query.Select(`products.*, product_categories.name as category_name, brands.name as brand_name, warehouses.name as warehouse_name, suppliers.name as supplier_name,
+		(SELECT COALESCE(SUM(stocks.quantity),0) FROM stocks WHERE stocks.product_id = products.id) as total_stock,
+		(SELECT COUNT(*) FROM product_spec_items WHERE product_spec_items.product_id = products.id AND product_spec_items.deleted_at IS NULL) as spec_count,
+		COALESCE((SELECT product_prices.price FROM product_prices WHERE product_prices.product_id = products.id AND product_prices.unit_id = 0 AND product_prices.level_id = ? AND product_prices.customer_id = 0 LIMIT 1), 0) as default_price,
+		COALESCE((SELECT SUM(soi.quantity) FROM sales_out_stock_items soi JOIN sales_out_stocks so ON so.id = soi.out_stock_id AND so.deleted_at IS NULL WHERE soi.product_id = products.id AND so.company_id = ? AND so.status = 'completed'), 0) as sales_qty,
+		COALESCE((SELECT psi.weight FROM product_spec_items psi WHERE psi.product_id = products.id AND psi.deleted_at IS NULL ORDER BY psi.sort ASC, psi.id ASC LIMIT 1), 0) as weight,
+		COALESCE((SELECT psi.volume FROM product_spec_items psi WHERE psi.product_id = products.id AND psi.deleted_at IS NULL ORDER BY psi.sort ASC, psi.id ASC LIMIT 1), 0) as volume`, levelID, companyID).
 		Joins("LEFT JOIN product_categories ON product_categories.id = products.category_id").
 		Joins("LEFT JOIN brands ON brands.id = products.brand_id").
 		Joins("LEFT JOIN warehouses ON warehouses.id = products.warehouse_id").
@@ -1436,6 +1450,54 @@ func (h *ProductHandler) UpdateProductStatus(c *gin.Context) {
 		return
 	}
 	response.OkWithMessage(c, "更新成功", nil)
+}
+
+// BatchUpdateProductFields 批量更新商品的排序权重 / 搜索关键词（商品排序设置、完善搜索关键词）
+func (h *ProductHandler) BatchUpdateProductFields(c *gin.Context) {
+	var req struct {
+		Items []struct {
+			ID             uint   `json:"id" binding:"required"`
+			MallSortWeight *int   `json:"mallSortWeight"`
+			SearchKeywords *string `json:"searchKeywords" binding:"omitempty,max=255"`
+		} `json:"items" binding:"required,min=1,dive"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "请求参数错误: "+err.Error())
+		return
+	}
+	companyID := middleware.GetCompanyID(c)
+	if companyID == 0 {
+		response.Unauthorized(c, "未登录")
+		return
+	}
+
+	updated := 0
+	err := h.db.Transaction(func(tx *gorm.DB) error {
+		for _, item := range req.Items {
+			fields := map[string]interface{}{}
+			if item.MallSortWeight != nil {
+				fields["mall_sort_weight"] = *item.MallSortWeight
+			}
+			if item.SearchKeywords != nil {
+				fields["search_keywords"] = *item.SearchKeywords
+			}
+			if len(fields) == 0 {
+				continue
+			}
+			result := tx.Model(&model.Product{}).Where("id = ? AND company_id = ?", item.ID, companyID).Updates(fields)
+			if result.Error != nil {
+				return result.Error
+			}
+			updated += int(result.RowsAffected)
+		}
+		return nil
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("batch update product fields failed")
+		response.ServerError(c, "保存失败")
+		return
+	}
+	response.Ok(c, gin.H{"updated": updated})
 }
 
 // ReplaceProductUnits 替换商品的辅助单位（全量覆盖）
