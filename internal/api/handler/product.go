@@ -936,7 +936,7 @@ type ProductResp struct {
 	SalesQty      float64  `json:"salesQty"` // 销量（已完成销售出库累计）
 	Weight        float64  `json:"weight"`   // 商品重量(kg)，取首个规格行
 	Volume        float64  `json:"volume"`   // 商品体积(m³)，取首个规格行
-	Tags          []string `json:"tags"`
+	Tags          []string `json:"tags" gorm:"-"`
 }
 
 func (h *ProductHandler) ListProducts(c *gin.Context) {
@@ -1456,8 +1456,8 @@ func (h *ProductHandler) UpdateProductStatus(c *gin.Context) {
 func (h *ProductHandler) BatchUpdateProductFields(c *gin.Context) {
 	var req struct {
 		Items []struct {
-			ID             uint   `json:"id" binding:"required"`
-			MallSortWeight *int   `json:"mallSortWeight"`
+			ID             uint    `json:"id" binding:"required"`
+			MallSortWeight *int    `json:"mallSortWeight"`
 			SearchKeywords *string `json:"searchKeywords" binding:"omitempty,max=255"`
 		} `json:"items" binding:"required,min=1,dive"`
 	}
